@@ -42,7 +42,7 @@ function Shell() {
     const tick = async () => {
       if (document.visibilityState !== 'visible') return;
       const filled = await checkOrders();
-      for (const t of filled) toast(`限價單成交：${t.side === 'buy' ? '買進' : '賣出'} ${t.name} ${fmtNum(t.qty)} 股 @ ${fmtPrice(t.price, t.market)}`, 'info');
+      for (const t of filled) toast(`${t.note || '掛單成交'}：${t.side === 'buy' ? '買進' : '賣出'} ${t.name} ${fmtNum(t.qty)} 股 @ ${fmtPrice(t.price, t.market)}`, 'info');
       refreshPortfolio().catch(() => {});
     };
     const first = setTimeout(tick, 1500);

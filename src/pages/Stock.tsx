@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PriceChart, type Overlays, type SubKind } from '../components/PriceChart';
+import { ChipsCard } from '../components/ChipsCard';
 import { NewsList } from '../components/NewsList';
 import { Readings } from '../components/Readings';
 import { RelatedMarkets } from '../components/RelatedMarkets';
@@ -135,6 +136,9 @@ export function StockPage({ symbol }: { symbol: string }) {
           </div>
 
           <RelatedMarkets symbol={sym} industry={industry} refreshSec={app.settings.refreshSec} />
+          {/^\d{4,6}[A-Z]?\.(TW|TWO)$/.test(sym) && (
+            <ChipsCard code={sym.split('.')[0]} priceChg20={daily && daily.bars.length > 21 ? daily.bars[daily.bars.length - 1].close / daily.bars[daily.bars.length - 21].close - 1 : undefined} />
+          )}
           <NewsList symbol={sym} name={quote.name} />
 
           <div className="card">

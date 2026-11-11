@@ -27,8 +27,14 @@ export function reservedCash(acc: Account, cur: Currency, s: Settings, excludeId
     .filter((o) => o.side === 'buy' && curOf(o.market) === cur && o.id !== excludeId)
     .reduce((sum, o) => sum + calcFees(o.market, o.symbol, 'buy', o.qty, o.limit, s).net, 0);
 }
+const sellSum = (acc: Account, symbol: string, kind: 'limit' | 'stop', excludeId?: string) =>
+  acc.orders.filter((o) => o.side === 'sell' && o.symbol === symbol && (o.kind ?? 'limit') === kind && o.id !== excludeId).reduce((a, o) => a + o.qty, 0);
+/**
+ * 掛賣單保留的股數。同一批股票可以同時掛「限價賣出（停利）」與「停損單」，
+ * 兩者擇一成交，所以保留量取兩種的較大值而不是相加。
+ */
 export function reservedQty(acc: Account, symbol: string, excludeId?: string) {
-  return acc.orders.filter((o) => o.side === 'sell' && o.symbol === symbol && o.id !== excludeId).reduce((a, o) => a + o.qty, 0);
+  return Math.max(sellSum(acc, symbol, 'limit', excludeId), sellSum(acc, symbol, 'stop', excludeId));
 }
 export const availableCash = (acc: Account, cur: Currency, s: Settings, excludeId?: string) =>
   acc.cash[cur] - reservedCash(acc, cur, s, excludeId);
@@ -72,7 +78,8 @@ export function executeTrade(acc0: Account, t: TradeInput, s: Settings): Account
     acc.positions[t.symbol] = p;
     acc.cash[cur] = r2(acc.cash[cur] - f.net);
   } else {
-    const avail = availableQty(acc, t.symbol, t.orderId);
+    // 掛單成交時以實際持股為準（停利與停損共用同一批股票）
+    const avail = t.orderId ? (acc.positions[t.symbol]?.qty ?? 0) : availableQty(acc, t.symbol);
     if (t.qty > avail) throw new Error(`可賣股數不足：持有可賣 ${avail} 股`);
     const p = acc.positions[t.symbol];
     const realized = r2(f.net - p.avgCost * t.qty);
@@ -83,6 +90,18 @@ export function executeTrade(acc0: Account, t: TradeInput, s: Settings): Account
     acc.cash[cur] = r2(acc.cash[cur] + f.net);
   }
   if (t.orderId) acc.orders = acc.orders.filter((o) => o.id !== t.orderId);
+  if (t.side === 'sell') {
+    // 賣出後持股減少：取消超出持股的賣單（例如停利成交後，對應的停損單自動取消）
+    const left = acc.positions[t.symbol]?.qty ?? 0;
+    const used = { limit: 0, stop: 0 };
+    acc.orders = acc.orders.filter((o) => {
+      if (o.side !== 'sell' || o.symbol !== t.symbol) return true;
+      const k = o.kind ?? 'limit';
+      if (used[k] + o.qty > left) return false;
+      used[k] += o.qty;
+      return true;
+    });
+  }
   acc.trades.unshift(trade);
   return acc;
 }
@@ -95,9 +114,12 @@ export function placeLimitOrder(acc0: Account, o: Omit<PendingOrder, 'id' | 'cre
     const need = calcFees(o.market, o.symbol, 'buy', o.qty, o.limit, s).net;
     const avail = availableCash(acc0, cur, s);
     if (need > avail + 1e-6) throw new Error(`可用資金不足：需要 ${fmtN(need)}，可用 ${fmtN(avail)} ${cur}`);
-  } else if (o.qty > availableQty(acc0, o.symbol)) {
-    throw new Error(`可賣股數不足：持有可賣 ${availableQty(acc0, o.symbol)} 股`);
+  } else {
+    const kind = o.kind ?? 'limit';
+    const free = (acc0.positions[o.symbol]?.qty ?? 0) - sellSum(acc0, o.symbol, kind);
+    if (o.qty > free) throw new Error(`可掛${kind === 'stop' ? '停損' : '賣出'}股數不足：還可掛 ${Math.max(free, 0)} 股`);
   }
+  if (o.kind === 'stop' && o.side !== 'sell') throw new Error('停損單只能用於賣出持股');
   const acc = clone(acc0);
   acc.orders.push({ ...o, id: uid(), createdAt: Date.now() });
   return acc;
@@ -119,6 +141,11 @@ export function findFill(order: PendingOrder, bars: Bar[]): { price: number; tim
   for (const b of bars) {
     if (b.time < since - 60) continue;
     if (order.side === 'buy' && b.low <= order.limit) return { price: Math.min(order.limit, b.open), time: b.time * 1000 };
+    if (order.side === 'sell' && order.kind === 'stop') {
+      // 停損：最低價跌破停損價即觸發；若開盤就跳空跌破，以開盤價成交（實際虧損會比預期大）
+      if (b.low <= order.limit) return { price: Math.min(order.limit, b.open), time: b.time * 1000 };
+      continue;
+    }
     if (order.side === 'sell' && b.high >= order.limit) return { price: Math.max(order.limit, b.open), time: b.time * 1000 };
   }
   return null;

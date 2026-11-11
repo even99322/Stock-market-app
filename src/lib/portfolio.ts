@@ -57,7 +57,7 @@ export async function checkOrders(): Promise<Trade[]> {
       if (!s.account.orders.some((x) => x.id === o.id)) continue;
       const acc = executeTrade(s.account, {
         symbol: o.symbol, name: o.name, market: o.market, side: o.side, qty: o.qty,
-        price: fill.price, time: fill.time, orderId: o.id, note: '限價單成交',
+        price: fill.price, time: fill.time, orderId: o.id, note: o.kind === 'stop' ? '停損單觸發' : '限價單成交',
       }, s.settings);
       store.update((st) => ({ ...st, account: acc }));
       filled.push(acc.trades[0]);

@@ -14,7 +14,7 @@ function useWidth() {
   return [ref, w] as const;
 }
 
-export interface BarSeries { name: string; color: string; values: (number | null | undefined)[] }
+export interface BarSeries { name: string; color: string; values: (number | null | undefined)[]; /** 正值用漲色、負值用跌色（買賣超） */ sign?: boolean }
 
 const fmtShort = (v: number) => {
   const a = Math.abs(v);
@@ -64,7 +64,7 @@ export function BarChart({ labels, series, height = 200, format = fmtShort, sub 
                 const v = s.values[i];
                 if (v == null || !Number.isFinite(v)) return null;
                 const top = Math.min(y(v), zero), h = Math.max(1, Math.abs(y(v) - zero));
-                return <rect key={s.name} x={gx + k * bw} y={top} width={bw - 2} height={h} rx={2} fill={v < 0 ? '#9aa5bb' : s.color} />;
+                return <rect key={s.name} x={gx + k * bw} y={top} width={bw - 2} height={h} rx={2} fill={s.sign ? (v < 0 ? 'var(--down)' : 'var(--up)') : v < 0 ? '#9aa5bb' : s.color} />;
               })}
               {showLb(i) && <text x={padL + i * gw + gw / 2} y={H - (sub ? 20 : 6)} textAnchor="middle" fontSize={11} fill="var(--muted)">{lb}</text>}
               {showLb(i) && sub?.[i] && <text x={padL + i * gw + gw / 2} y={H - 5} textAnchor="middle" fontSize={10} fill={sub[i]!.startsWith('-') ? 'var(--down)' : 'var(--up)'}>{sub[i]}</text>}

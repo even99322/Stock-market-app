@@ -69,6 +69,8 @@ export interface PendingOrder {
   side: Side;
   qty: number;
   limit: number;
+  /** limit：限價單（預設）；stop：停損單，價格跌到 limit 以下時賣出 */
+  kind?: 'limit' | 'stop';
 }
 
 export interface FxRecord {

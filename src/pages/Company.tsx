@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { BarChart, LinesChart } from '../components/MiniCharts';
+import { DividendCard } from '../components/DividendCard';
 import { NewsList } from '../components/NewsList';
 import { go, Help, Seg, Spinner, Stat } from '../components/ui';
 import { analyze, computeRatios, fetchFinancials, margins, type Financials, type FinPeriod } from '../lib/financials';
@@ -152,6 +153,7 @@ export function CompanyPage({ symbol }: { symbol: string }) {
         </div>
       )}
 
+      {tw && <DividendCard code={symbol.split('.')[0]} price={quote && !quote.demo ? quote.price : undefined} />}
       <NewsList symbol={symbol} name={name} limit={6} />
 
       {/* ---------- 財報 ---------- */}

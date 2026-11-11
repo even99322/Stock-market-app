@@ -119,7 +119,7 @@ export function PortfolioPage() {
             {acc.orders.map((o) => (
               <div key={o.id} className="tr">
                 <div className="name"><b>{o.name}</b><span className="muted small">{fmtTime(o.createdAt)}</span></div>
-                <div className="num"><span className={`tag ${o.side}`}>{o.side === 'buy' ? '限價買' : '限價賣'}</span></div>
+                <div className="num"><span className={`tag ${o.side}`}>{o.kind === 'stop' ? '停損' : o.side === 'buy' ? '限價買' : '限價賣'}</span></div>
                 <div className="num">{fmtNum(o.qty)} 股 @ {fmtPrice(o.limit, o.market)}</div>
                 <div className="num"><button className="btn sm" onClick={() => store.update((s) => ({ ...s, account: cancelOrder(s.account, o.id) }))}>取消</button></div>
               </div>
