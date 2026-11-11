@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PriceChart, type Overlays, type SubKind } from '../components/PriceChart';
+import { NewsList } from '../components/NewsList';
 import { Readings } from '../components/Readings';
+import { RelatedMarkets } from '../components/RelatedMarkets';
 import { TradePanel } from '../components/TradePanel';
 import { go, Help, Seg, Spinner, Stat } from '../components/ui';
 import { cls, fmtMoney, fmtNum, fmtPct, fmtPrice, fmtTime, fmtVol } from '../lib/format';
 import { fetchChart, RANGES } from '../lib/market';
-import { getFundamental, loadTwData } from '../lib/names';
+import { getFundamental, isIndex, loadTwData } from '../lib/names';
+import { industryOf, loadTwSnapshot } from '../lib/twmarket';
 import { priceStats } from '../lib/stats';
 import { store, useApp } from '../lib/store';
 import type { ChartData } from '../lib/types';
@@ -22,6 +25,7 @@ export function StockPage({ symbol }: { symbol: string }) {
   const [daily, setDaily] = useState<ChartData | null>(null);
   const [err, setErr] = useState('');
   const [fundTick, setFundTick] = useState(0);
+  const [industry, setIndustry] = useState<string | undefined>(() => industryOf(symbol.split('.')[0]));
 
   const load = useCallback(async (force = false) => {
     setErr('');
@@ -37,7 +41,10 @@ export function StockPage({ symbol }: { symbol: string }) {
   useEffect(() => {
     setDaily(null);
     fetchChart(symbol, '1y').then(setDaily).catch(() => {});
-    if (/\.(TW|TWO)$/.test(symbol)) loadTwData().then(() => setFundTick((x) => x + 1));
+    if (/\.(TW|TWO)$/.test(symbol)) {
+      loadTwData().then(() => setFundTick((x) => x + 1));
+      loadTwSnapshot().then((sn) => setIndustry(sn.industry[symbol.split('.')[0]])).catch(() => {});
+    }
   }, [symbol]);
   useEffect(() => {
     const t = setInterval(() => {
@@ -89,7 +96,7 @@ export function StockPage({ symbol }: { symbol: string }) {
             {quote.demo && <span className="badge warn">示範資料</span>}
           </div>
         </div>
-        {!symbol.startsWith('^') && <button className="btn sm ghost" onClick={() => go('company', sym)}>📊 公司・財報</button>}
+        {!isIndex(symbol) && <button className="btn sm ghost" onClick={() => go('company', sym)}>📊 公司・財報</button>}
         <button className={`icon-btn star ${inWatch ? 'on' : ''}`} onClick={toggleWatch} title="加入自選">{inWatch ? '★' : '☆'}</button>
       </div>
       <div className="price-line">
@@ -123,8 +130,12 @@ export function StockPage({ symbol }: { symbol: string }) {
             <PriceChart
               bars={chart.bars} intraday={chart.intraday} gmtoffset={chart.gmtoffset} market={mk}
               overlays={overlays} sub={sub} redUp={app.settings.redUp} trades={trades}
+              baseline={range === '1d' ? chart.prevClose : undefined}
             />
           </div>
+
+          <RelatedMarkets symbol={sym} industry={industry} refreshSec={app.settings.refreshSec} />
+          <NewsList symbol={sym} name={quote.name} />
 
           <div className="card">
             <div className="card-title">今日與一年數據</div>
@@ -143,7 +154,7 @@ export function StockPage({ symbol }: { symbol: string }) {
               <Stat label="夏普值" value={stats ? stats.sharpe.toFixed(2) : '—'} help="sharpe" />
               <Stat label="上漲天數" value={fmtPct(stats?.upDays, false, 0)} />
               <Stat label="單日最大漲/跌" value={stats ? `${fmtPct(stats.bestDay)} / ${fmtPct(stats.worstDay)}` : '—'} />
-              {mk === 'TW' && !sym.startsWith('^') && (
+              {mk === 'TW' && !isIndex(sym) && (
                 <>
                   <Stat label="本益比" value={fund?.pe?.toFixed(2) ?? '—'} help="pe" />
                   <Stat label="殖利率" value={fund?.dividendYield != null ? fund.dividendYield.toFixed(2) + '%' : '—'} help="yield" />

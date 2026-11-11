@@ -36,6 +36,14 @@ const BUILTIN_RAW: [string, string, Market, SymbolInfo['kind']?][] = [
   ['AVGO', 'Broadcom 博通', 'US'], ['NFLX', 'Netflix', 'US'], ['JPM', 'JPMorgan 摩根大通', 'US'],
   ['KO', 'Coca-Cola 可口可樂', 'US'], ['BRK-B', 'Berkshire 波克夏 B', 'US'], ['V', 'Visa', 'US'],
   ['COST', 'Costco 好市多', 'US'], ['DIS', 'Disney 迪士尼', 'US'],
+  ['^SOX', '費城半導體指數', 'US', 'index'], ['^VIX', 'VIX 恐慌指數', 'US', 'index'],
+  ['^TNX', '美國10年期公債殖利率', 'US', 'index'], ['DX-Y.NYB', '美元指數', 'US', 'index'],
+  ['TWD=X', '美元/台幣', 'US', 'index'], ['JPY=X', '美元/日圓', 'US', 'index'],
+  ['ES=F', 'S&P 500 期貨', 'US', 'index'], ['NQ=F', '那斯達克100 期貨', 'US', 'index'], ['YM=F', '道瓊期貨', 'US', 'index'],
+  ['GC=F', '黃金期貨', 'US', 'index'], ['CL=F', '原油期貨', 'US', 'index'],
+  ['^N225', '日經225 指數', 'US', 'index'], ['^HSI', '恆生指數', 'US', 'index'],
+  ['SOXX', 'iShares 半導體 ETF', 'US', 'etf'], ['EWT', 'iShares MSCI 台灣 ETF', 'US', 'etf'],
+  ['UMC', '聯電 ADR', 'US'], ['ASX', '日月光 ADR', 'US'], ['CHT', '中華電 ADR', 'US'],
   ['SPY', 'SPDR 標普500 ETF', 'US', 'etf'], ['VOO', 'Vanguard 標普500 ETF', 'US', 'etf'],
   ['QQQ', 'Invesco 那斯達克100 ETF', 'US', 'etf'], ['VTI', 'Vanguard 全美股市 ETF', 'US', 'etf'],
   ['VT', 'Vanguard 全世界股票 ETF', 'US', 'etf'],
@@ -151,8 +159,9 @@ export function marketOf(symbol: string): Market {
   return 'US';
 }
 
+/** 指數、匯率、期貨等不能在模擬帳戶交易、也沒有財報的標的 */
 export function isIndex(symbol: string) {
-  return symbol.startsWith('^');
+  return symbol.startsWith('^') || symbol.includes('=') || symbol.endsWith('.NYB');
 }
 
 /** 使用者輸入轉成 Yahoo 代號：2330 → 2330.TW、aapl → AAPL */
@@ -163,7 +172,7 @@ export function normalizeSymbol(input: string): string {
     const hit = [...BUILTIN, ...twList].find((x) => x.symbol.split('.')[0] === s);
     return hit ? hit.symbol : `${s}.TW`;
   }
-  if (/\.(TW|TWO)$/.test(s) || s.startsWith('^')) return s;
+  if (/\.(TW|TWO)$/.test(s) || s.startsWith('^') || s.includes('=') || s.endsWith('.NYB')) return s;
   return s.replace(/\s+/g, '').replace(/\./g, '-'); // BRK.B → BRK-B
 }
 

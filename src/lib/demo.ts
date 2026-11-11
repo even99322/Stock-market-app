@@ -155,7 +155,7 @@ export function demoChart(symbol: string, name: string, market: Market, range: s
     isOpen: isMarketOpenNow(market),
     intraday,
     demo: true,
-    tradable: !symbol.startsWith('^'),
+    tradable: !(symbol.startsWith('^') || symbol.includes('=') || symbol.endsWith('.NYB')),
     fetchedAt: Date.now(),
     high52: Math.max(...yr.map((b) => b.high)),
     low52: Math.min(...yr.map((b) => b.low)),

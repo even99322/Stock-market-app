@@ -25,6 +25,8 @@ export default defineConfig({
       '/px/tpex': px('https://www.tpex.org.tw'),
       '/px/fm': px('https://api.finmindtrade.com'),
       '/px/wiki': px('https://zh.wikipedia.org'),
+      '/px/gn': px('https://news.google.com'),
+      '/px/taifex': px('https://openapi.taifex.com.tw'),
     },
   },
   build: { outDir: 'dist', chunkSizeWarningLimit: 2000 },

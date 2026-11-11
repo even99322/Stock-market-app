@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { BarChart, LinesChart } from '../components/MiniCharts';
+import { NewsList } from '../components/NewsList';
 import { go, Help, Seg, Spinner, Stat } from '../components/ui';
 import { analyze, computeRatios, fetchFinancials, margins, type Financials, type FinPeriod } from '../lib/financials';
 import { cls, fmtPct, fmtPrice } from '../lib/format';
@@ -150,6 +151,8 @@ export function CompanyPage({ symbol }: { symbol: string }) {
           )}
         </div>
       )}
+
+      <NewsList symbol={symbol} name={name} limit={6} />
 
       {/* ---------- 財報 ---------- */}
       {finErr && <div className="card err">財報：{finErr}</div>}

@@ -4,7 +4,7 @@ import {
   type IChartApi, type Time, type SeriesMarker, type LogicalRange,
 } from 'lightweight-charts';
 import { sma, bollinger, rsi, macd, kd, obv, type Series } from '../lib/indicators';
-import { dateStr, fmtPrice, fmtVol } from '../lib/format';
+import { cls, dateStr, fmtChartTime, fmtPrice, fmtVol } from '../lib/format';
 import type { Bar, Market, Trade } from '../lib/types';
 
 export type SubKind = 'none' | 'rsi' | 'macd' | 'kd' | 'obv';
@@ -23,15 +23,18 @@ interface Props {
   /** 回放時固定顯示最後 N 根 */
   visibleBars?: number;
   hideDates?: boolean;
+  /** 昨收價：提供時畫出「昨收」參考線，標籤的漲跌幅也以它為基準（1 日圖用） */
+  baseline?: number;
 }
 
 const MA_COLORS = { 5: '#f5c542', 20: '#e46cf0', 60: '#4ea1ff' } as const;
 const css = (v: string) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 
+
 export function PriceChart(p: Props) {
   const mainRef = useRef<HTMLDivElement>(null);
   const subRef = useRef<HTMLDivElement>(null);
-  const [legend, setLegend] = useState<{ bar: Bar; i: number } | null>(null);
+  const [legend, setLegend] = useState<{ bar: Bar; i: number; x: number } | null>(null);
   const up = p.redUp ? '#f0475a' : '#22b07d';
   const down = p.redUp ? '#22b07d' : '#f0475a';
 
@@ -66,7 +69,7 @@ export function PriceChart(p: Props) {
       },
       localization: {
         locale: 'zh-TW',
-        timeFormatter: p.hideDates ? () => '' : undefined,
+        timeFormatter: p.hideDates ? () => '' : (t: unknown) => fmtChartTime(t),
       },
     };
     const charts: IChartApi[] = [];
@@ -80,6 +83,10 @@ export function PriceChart(p: Props) {
       priceFormat: { type: 'price', precision: p.market === 'US' ? 2 : 2, minMove: 0.01 },
     });
     candle.setData(p.bars.map((b, i) => ({ time: T[i], open: b.open, high: b.high, low: b.low, close: b.close })));
+
+    if (p.baseline != null && p.intraday) {
+      candle.createPriceLine({ price: p.baseline, color: '#9aa5bb', lineWidth: 1, lineStyle: LineStyle.Dotted, axisLabelVisible: true, title: '昨收' });
+    }
 
     const vol = main.addHistogramSeries({ priceScaleId: 'vol', priceFormat: { type: 'volume' }, lastValueVisible: false, priceLineVisible: false });
     main.priceScale('vol').applyOptions({ scaleMargins: { top: 0.8, bottom: 0 }, visible: false });
@@ -160,13 +167,14 @@ export function PriceChart(p: Props) {
     subChart?.timeScale().setVisibleLogicalRange(main.timeScale().getVisibleLogicalRange()!);
 
     main.subscribeCrosshairMove((param) => {
-      if (!param.time || param.logical == null) { setLegend(null); return; }
+      if (!param.time || param.logical == null || !param.point) { setLegend(null); return; }
       const i = Math.round(param.logical);
-      if (p.bars[i]) setLegend({ bar: p.bars[i], i });
+      if (p.bars[i]) setLegend({ bar: p.bars[i], i, x: param.point.x });
+      else setLegend(null);
     });
 
     return () => charts.forEach((c) => c.remove());
-  }, [p.bars, p.overlays.ma, p.overlays.boll, p.sub, p.redUp, p.trades, toTime, ind, p.visibleBars, p.hideDates, p.market, p.intraday]);
+  }, [p.bars, p.overlays.ma, p.overlays.boll, p.sub, p.redUp, p.trades, toTime, ind, p.visibleBars, p.hideDates, p.market, p.intraday, p.baseline]);
 
   const li = legend?.i ?? p.bars.length - 1;
   const lb = legend?.bar ?? p.bars[p.bars.length - 1];
@@ -185,6 +193,12 @@ export function PriceChart(p: Props) {
 
   if (!p.bars.length) return <div className="chart-empty">沒有資料</div>;
   const chg = prev ? lb.close / prev.close - 1 : 0;
+  // 游標標籤：1 日圖以昨收為基準，其餘以前一根 K 線收盤為基準
+  const base = p.baseline != null && p.intraday ? p.baseline : prev?.close;
+  const tipChg = base ? lb.close - base : 0;
+  const tipPct = base ? tipChg / base : 0;
+  const boxW = mainRef.current?.clientWidth ?? 600;
+  const tipLeft = legend ? Math.min(Math.max(legend.x, 118), Math.max(118, boxW - 118 - 56)) : 0;
   return (
     <div className="chart-wrap">
       <div className="legend">
@@ -201,7 +215,24 @@ export function PriceChart(p: Props) {
           </span>
         )}
       </div>
-      <div ref={mainRef} className="chart-main" style={{ height: p.height ?? 380 }} />
+      <div className="chart-box">
+        <div ref={mainRef} className="chart-main" style={{ height: p.height ?? 380 }} />
+        {legend && (
+          <div className="chart-tip" style={{ left: tipLeft, transform: 'translateX(-50%)' }}>
+            {!p.hideDates && <div className="tip-date">{fmtChartTime(toTime(lb.time))}</div>}
+            <div className="tip-row">
+              <span>價格 <b className={cls(tipChg)}>{fmtPrice(lb.close, p.market)} ({tipChg > 0 ? '+' : ''}{(tipPct * 100).toFixed(2)}%)</b></span>
+              <span>成交量 <b>{fmtVol(lb.volume, p.market)}</b></span>
+            </div>
+            <div className="tip-row">
+              <span>開 <b>{fmtPrice(lb.open, p.market)}</b></span>
+              <span>高 <b>{fmtPrice(lb.high, p.market)}</b></span>
+              <span>低 <b>{fmtPrice(lb.low, p.market)}</b></span>
+              <span>漲跌 <b className={cls(tipChg)}>{tipChg > 0 ? '+' : ''}{fmtPrice(tipChg, p.market)}</b></span>
+            </div>
+          </div>
+        )}
+      </div>
       {p.sub !== 'none' && (
         <>
           <div className="legend sub">{subLegend()}</div>

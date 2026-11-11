@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { NewsList } from '../components/NewsList';
 import { SymbolSearch } from '../components/SymbolSearch';
 import { go, Help, Spinner } from '../components/ui';
 import { cls, fmtPct, fmtPrice } from '../lib/format';
@@ -96,6 +97,10 @@ export function MarketPage() {
           })}
           {app.watchlist.filter((s) => !INDICES.includes(s)).length === 0 && <div className="muted pad">還沒有自選股，用上方搜尋找一檔吧。</div>}
         </div>
+      </div>
+      <div className="two-col">
+        <NewsList title="台股頭條" query="台股 when:1d" limit={6} />
+        <NewsList title="美股頭條" query="美股 when:1d" limit={6} />
       </div>
     </div>
   );

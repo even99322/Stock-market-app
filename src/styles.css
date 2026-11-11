@@ -323,3 +323,33 @@ code { background: var(--bg); padding: 1px 5px; border-radius: 4px; }
 .fin-table th, .fin-table td { padding: 6px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--grid); }
 .fin-table th:first-child, .fin-table td:first-child { text-align: left; position: sticky; left: 0; background: var(--panel); }
 .fin-table thead th { color: var(--muted); font-weight: 500; }
+
+/* ---------- 新聞、相關市場、圖表標籤 ---------- */
+.news { display: flex; flex-direction: column; }
+.news-item { display: block; padding: 9px 4px; border-bottom: 1px solid var(--grid); color: var(--text); text-decoration: none; }
+.news-item:hover { background: var(--panel2); }
+.news-title { line-height: 1.45; }
+.rel-group { display: flex; flex-direction: column; gap: 6px; }
+.rel-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.rel-tile { text-align: left; border: 1px solid var(--line); background: var(--panel2); border-radius: 10px; padding: 8px 10px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rel-tile:hover { border-color: var(--accent); }
+.rel-tile.static { cursor: default; }
+.rel-tile.static:hover { border-color: var(--line); }
+.rel-top { display: flex; justify-content: space-between; gap: 6px; font-size: 13px; }
+.rel-top b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rel-mid { display: flex; justify-content: space-between; align-items: center; gap: 6px; min-height: 26px; }
+.rel-price { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.rel-tile .rel-why { font-size: 11px; line-height: 1.35; }
+.spark { flex-shrink: 0; }
+@media (max-width: 760px) { .rel-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .rel-price { font-size: 15px; } .spark { width: 56px; } }
+.chart-box { position: relative; }
+.chart-tip {
+  position: absolute; top: 4px; z-index: 5; pointer-events: none; white-space: nowrap;
+  background: rgba(15, 20, 32, 0.94); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px;
+  font-size: 12px; line-height: 1.6; font-variant-numeric: tabular-nums; box-shadow: 0 4px 14px #0008;
+}
+.chart-tip .tip-date { color: var(--muted); }
+.chart-tip b { font-weight: 600; }
+.chart-tip .tip-row { display: flex; gap: 10px; }
+.chart-tip .tip-row span { color: var(--muted); }
+.chart-tip .tip-row span b { color: var(--text); }

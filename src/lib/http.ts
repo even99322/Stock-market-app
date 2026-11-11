@@ -38,9 +38,11 @@ const PROXY_MAP: [string, string][] = [
   ['https://www.tpex.org.tw', '/px/tpex'],
   ['https://api.finmindtrade.com', '/px/fm'],
   ['https://zh.wikipedia.org', '/px/wiki'],
+  ['https://news.google.com', '/px/gn'],
+  ['https://openapi.taifex.com.tw', '/px/taifex'],
 ];
 
-async function getText(url: string, headers: Record<string, string> = {}): Promise<{ status: number; body: string }> {
+export async function getText(url: string, headers: Record<string, string> = {}): Promise<{ status: number; body: string }> {
   const p = platform();
   if (p === 'electron') {
     const r = await window.stockBridge!.get(url, headers);

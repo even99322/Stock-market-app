@@ -47,3 +47,17 @@ export function fmtTime(ms: number) {
   const p = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
+
+const WD = ['日', '一', '二', '三', '四', '五', '六'];
+/** 圖表時間 → 「2026年11月11日 上午9:51」或「2026年11月11日（三）」 */
+export function fmtChartTime(t: unknown): string {
+  let d: Date, withTime = false;
+  if (typeof t === 'number') { d = new Date(t * 1000); withTime = true; }
+  else if (typeof t === 'string') d = new Date(t + 'T00:00:00Z');
+  else if (t && typeof t === 'object' && 'year' in (t as any)) { const b = t as any; d = new Date(Date.UTC(b.year, b.month - 1, b.day)); }
+  else return '';
+  const date = `${d.getUTCFullYear()}年${d.getUTCMonth() + 1}月${d.getUTCDate()}日`;
+  if (!withTime) return `${date}（${WD[d.getUTCDay()]}）`;
+  const h = d.getUTCHours(), m = String(d.getUTCMinutes()).padStart(2, '0');
+  return `${date} ${h < 12 ? '上午' : '下午'}${h % 12 === 0 ? 12 : h % 12}:${m}`;
+}
