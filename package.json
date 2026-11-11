@@ -1,0 +1,84 @@
+{
+  "name": "stocksim",
+  "productName": "股市模擬學習平台",
+  "version": "1.0.0",
+  "description": "台股＋美股模擬交易與學習平台",
+  "author": "張譯文",
+  "main": "electron/main.cjs",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run --environment jsdom",
+    "electron": "npm run build && electron .",
+    "dist:win": "npm run build && electron-builder --win nsis --x64 --publish never",
+    "android:sync": "npm run build && npx cap sync android",
+    "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug",
+    "release": "node scripts/release.mjs"
+  },
+  "build": {
+    "appId": "com.stocksim.learn",
+    "productName": "StockSim",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "artifactName": "StockSim-Setup-${version}.exe",
+      "shortcutName": "股市模擬學習平台",
+      "deleteAppDataOnUninstall": false
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "even99322",
+        "repo": "Stock-market-app",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.2.1",
+    "firebase": "^10.14.1",
+    "lightweight-charts": "^4.2.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "electron-updater": "^6.8.11"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^6.2.1",
+    "@capacitor/cli": "^6.2.1",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
+    "jsdom": "^25.0.1",
+    "typescript": "^5.7.2",
+    "vite": "^5.4.11",
+    "vitest": "^2.1.8"
+  },
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/even99322/Stock-market-app.git"
+  }
+}
