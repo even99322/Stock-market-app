@@ -353,3 +353,9 @@ code { background: var(--bg); padding: 1px 5px; border-radius: 4px; }
 .chart-tip .tip-row { display: flex; gap: 10px; }
 .chart-tip .tip-row span { color: var(--muted); }
 .chart-tip .tip-row span b { color: var(--text); }
+
+.chart-main { touch-action: pan-y; }
+.chart-mode {
+  position: absolute; left: 6px; bottom: 30px; z-index: 4; border: 1px solid var(--line); border-radius: 99px;
+  background: rgba(21, 27, 40, 0.9); color: var(--text); font-size: 11px; padding: 4px 10px;
+}

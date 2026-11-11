@@ -75,7 +75,25 @@ function HelpModal({ id, onClose, onGo }: { id: string; onClose: () => void; onG
   );
 }
 
+// Android 返回鍵：原生端會呼叫 window.__stocksimBack()，回傳 'handled' 表示已由網頁處理（關閉視窗）
+const backStack: (() => void)[] = [];
+(window as any).__stocksimBack = () => {
+  const f = backStack.pop();
+  if (f) { f(); return 'handled'; }
+  return 'none';
+};
+/** 元件開啟期間攔截返回鍵（先關閉自己） */
+export function useBackClose(onClose: () => void, active = true) {
+  useEffect(() => {
+    if (!active) return;
+    const f = () => onClose();
+    backStack.push(f);
+    return () => { const i = backStack.indexOf(f); if (i >= 0) backStack.splice(i, 1); };
+  }, [active]); // eslint-disable-line
+}
+
 export function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
+  useBackClose(onClose);
   useEffect(() => {
     const f = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', f);

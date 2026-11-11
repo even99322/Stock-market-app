@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   createChart, CrosshairMode, ColorType, LineStyle,
-  type IChartApi, type Time, type SeriesMarker, type LogicalRange,
+  type IChartApi, type Time, type SeriesMarker, type LogicalRange, type Logical,
 } from 'lightweight-charts';
 import { sma, bollinger, rsi, macd, kd, obv, type Series } from '../lib/indicators';
 import { cls, dateStr, fmtChartTime, fmtPrice, fmtVol } from '../lib/format';
@@ -35,6 +35,10 @@ export function PriceChart(p: Props) {
   const mainRef = useRef<HTMLDivElement>(null);
   const subRef = useRef<HTMLDivElement>(null);
   const [legend, setLegend] = useState<{ bar: Bar; i: number; x: number } | null>(null);
+  // 觸控裝置：「查價」模式下手指在圖上左右滑動 = 移動游標標籤；「平移」模式 = 拖曳捲動圖表
+  const coarse = useMemo(() => typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches, []);
+  const [inspect, setInspect] = useState(() => localStorage.getItem('stocksim.inspect') !== '0');
+  const touchInspect = coarse && inspect;
   const up = p.redUp ? '#f0475a' : '#22b07d';
   const down = p.redUp ? '#22b07d' : '#f0475a';
 
@@ -53,6 +57,7 @@ export function PriceChart(p: Props) {
   }, [p.bars]);
 
   useEffect(() => {
+    setLegend(null);
     if (!mainRef.current || !p.bars.length) return;
     const bg = css('--panel') || '#151b28';
     const text = css('--muted') || '#8a94a8';
@@ -62,6 +67,8 @@ export function PriceChart(p: Props) {
       layout: { background: { type: ColorType.Solid, color: bg }, textColor: text, fontSize: 11 },
       grid: { vertLines: { color: grid }, horzLines: { color: grid } },
       crosshair: { mode: CrosshairMode.Normal },
+      // vertTouchDrag 關閉：在圖上直向滑動時捲動頁面，而不是被圖表吃掉
+      handleScroll: touchInspect ? { horzTouchDrag: false, vertTouchDrag: false } : { vertTouchDrag: false },
       rightPriceScale: { borderColor: grid },
       timeScale: {
         borderColor: grid, timeVisible: p.intraday, secondsVisible: false,
@@ -166,15 +173,35 @@ export function PriceChart(p: Props) {
     }
     subChart?.timeScale().setVisibleLogicalRange(main.timeScale().getVisibleLogicalRange()!);
 
+    // 觸控查價：自行處理手指位置（不依賴長按），放開後標籤保留在最後一根
+    const el = mainRef.current;
+    const onTouch = (e: TouchEvent) => {
+      if (!touchInspect || e.touches.length !== 1) return;
+      const x = e.touches[0].clientX - el.getBoundingClientRect().left;
+      const logical = main.timeScale().coordinateToLogical(x);
+      if (logical == null) return;
+      const i = Math.max(0, Math.min(p.bars.length - 1, Math.round(logical)));
+      const bx = main.timeScale().logicalToCoordinate(i as unknown as Logical) ?? x;
+      setLegend({ bar: p.bars[i], i, x: bx });
+      try { main.setCrosshairPosition(p.bars[i].close, T[i], candle); } catch { /* ignore */ }
+    };
+    el.addEventListener('touchstart', onTouch, { passive: true });
+    el.addEventListener('touchmove', onTouch, { passive: true });
+
     main.subscribeCrosshairMove((param) => {
-      if (!param.time || param.logical == null || !param.point) { setLegend(null); return; }
+      if (!param.time || param.logical == null || !param.point) { if (!touchInspect) setLegend(null); return; }
+      if (touchInspect) return;
       const i = Math.round(param.logical);
       if (p.bars[i]) setLegend({ bar: p.bars[i], i, x: param.point.x });
       else setLegend(null);
     });
 
-    return () => charts.forEach((c) => c.remove());
-  }, [p.bars, p.overlays.ma, p.overlays.boll, p.sub, p.redUp, p.trades, toTime, ind, p.visibleBars, p.hideDates, p.market, p.intraday, p.baseline]);
+    return () => {
+      el.removeEventListener('touchstart', onTouch);
+      el.removeEventListener('touchmove', onTouch);
+      charts.forEach((c) => c.remove());
+    };
+  }, [p.bars, p.overlays.ma, p.overlays.boll, p.sub, p.redUp, p.trades, toTime, ind, p.visibleBars, p.hideDates, p.market, p.intraday, p.baseline, touchInspect]);
 
   const li = legend?.i ?? p.bars.length - 1;
   const lb = legend?.bar ?? p.bars[p.bars.length - 1];
@@ -217,6 +244,11 @@ export function PriceChart(p: Props) {
       </div>
       <div className="chart-box">
         <div ref={mainRef} className="chart-main" style={{ height: p.height ?? 380 }} />
+        {coarse && (
+          <button className="chart-mode" onClick={() => { const v = !inspect; setInspect(v); localStorage.setItem('stocksim.inspect', v ? '1' : '0'); }}>
+            {inspect ? '👆 查價中（點此改為平移）' : '✋ 平移中（點此改為查價）'}
+          </button>
+        )}
         {legend && (
           <div className="chart-tip" style={{ left: tipLeft, transform: 'translateX(-50%)' }}>
             {!p.hideDates && <div className="tip-date">{fmtChartTime(toTime(lb.time))}</div>}
