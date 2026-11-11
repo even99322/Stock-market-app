@@ -5,6 +5,16 @@ import type { AppState, Settings } from './types';
 
 const KEY = 'stocksim.state.v1';
 
+/** 內建的 Firebase 專案（stocksim-e9205）。這些值不是機密，資料安全由 Firestore 安全規則保護。 */
+export const DEFAULT_FIREBASE_CONFIG = JSON.stringify({
+  apiKey: 'AIzaSyAn6Zbl5zCiyqjAbMn3o1i6Cwj4RYkPyWA',
+  authDomain: 'stocksim-e9205.firebaseapp.com',
+  projectId: 'stocksim-e9205',
+  storageBucket: 'stocksim-e9205.firebasestorage.app',
+  messagingSenderId: '42032864189',
+  appId: '1:42032864189:web:c7cc00fff257f9eeb610d4',
+}, null, 2);
+
 export const DEFAULT_SETTINGS: Settings = {
   twFeeDiscount: 0.6,
   twMinFee: 20,
@@ -13,7 +23,7 @@ export const DEFAULT_SETTINGS: Settings = {
   initialTWD: 1_000_000,
   initialUSD: 30_000,
   refreshSec: 30,
-  firebaseConfig: '',
+  firebaseConfig: DEFAULT_FIREBASE_CONFIG,
   finmindToken: '',
 };
 
@@ -33,7 +43,10 @@ function load(): AppState {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const s = JSON.parse(raw) as AppState;
-      return { ...defaultState(), ...s, settings: { ...DEFAULT_SETTINGS, ...s.settings } };
+      const settings = { ...DEFAULT_SETTINGS, ...s.settings };
+      // 舊版沒有內建設定：沒填過、也沒主動關閉的話，自動套用內建專案
+      if (!settings.firebaseConfig?.trim() && !settings.firebaseOptOut) settings.firebaseConfig = DEFAULT_FIREBASE_CONFIG;
+      return { ...defaultState(), ...s, settings };
     }
   } catch { /* ignore */ }
   return defaultState();
@@ -62,7 +75,7 @@ export const store = {
   },
   /** 套用雲端資料（不觸發上傳） */
   replace(next: AppState) {
-    state = { ...defaultState(), ...next, settings: { ...DEFAULT_SETTINGS, ...next.settings, firebaseConfig: state.settings.firebaseConfig } };
+    state = { ...defaultState(), ...next, settings: { ...DEFAULT_SETTINGS, ...next.settings, firebaseConfig: state.settings.firebaseConfig, firebaseOptOut: state.settings.firebaseOptOut } };
     emit();
   },
   onLocalChange(h: (s: AppState) => void) {

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Help, useUi } from '../components/ui';
 import { platform } from '../lib/http';
 import { loadTwData } from '../lib/names';
-import { DEFAULT_SETTINGS, store, useApp } from '../lib/store';
+import { DEFAULT_FIREBASE_CONFIG, DEFAULT_SETTINGS, store, useApp } from '../lib/store';
 import { forceDownload, forceUpload, initSync, login, logout, parseConfig, resetPassword, useSync } from '../lib/sync';
 import type { AppState, Settings } from '../lib/types';
 import { checkNow, downloadApk, installNow, RELEASES_URL, useUpdate } from '../lib/updater';
@@ -64,7 +64,7 @@ export function SettingsPage() {
 
       <div className="card">
         <div className="card-title">還原預設</div>
-        <button className="btn sm ghost" onClick={() => confirm('把交易成本與顯示設定還原為預設？') && set({ ...DEFAULT_SETTINGS, firebaseConfig: s.firebaseConfig })}>還原設定預設值</button>
+        <button className="btn sm ghost" onClick={() => confirm('把交易成本與顯示設定還原為預設？') && set({ ...DEFAULT_SETTINGS, firebaseConfig: s.firebaseConfig, firebaseOptOut: s.firebaseOptOut })}>還原設定預設值</button>
       </div>
     </div>
   );
@@ -82,7 +82,7 @@ function SyncCard() {
 
   const saveCfg = async () => {
     if (cfg.trim() && !parseConfig(cfg)) return toast('無法解析設定，請貼上 Firebase 主控台的 firebaseConfig 物件', 'err');
-    store.update((st) => ({ ...st, settings: { ...st.settings, firebaseConfig: cfg } }));
+    store.update((st) => ({ ...st, settings: { ...st.settings, firebaseConfig: cfg, firebaseOptOut: !cfg.trim() } }));
     await initSync();
     toast(cfg.trim() ? 'Firebase 設定已儲存' : '已關閉雲端同步');
   };
@@ -115,7 +115,10 @@ function SyncCard() {
             </ol>
           )}
           <textarea rows={6} placeholder={'const firebaseConfig = {\n  apiKey: "...",\n  authDomain: "...",\n  projectId: "...",\n  ...\n};'} value={cfg} onChange={(e) => setCfg(e.target.value)} />
-          <button className="btn" onClick={saveCfg}>儲存並啟用</button>
+          <div className="row gap wrap">
+            <button className="btn" onClick={saveCfg}>儲存並啟用</button>
+            <button className="btn ghost" onClick={() => { setCfg(DEFAULT_FIREBASE_CONFIG); store.update((st) => ({ ...st, settings: { ...st.settings, firebaseConfig: DEFAULT_FIREBASE_CONFIG, firebaseOptOut: false } })); initSync(); }}>使用內建設定</button>
+          </div>
         </>
       ) : sync.status === 'signed-out' ? (
         <div className="login">
@@ -126,7 +129,7 @@ function SyncCard() {
             <button className="btn ghost" disabled={busy} onClick={() => doLogin(true)}>註冊新帳號</button>
             <button className="link" onClick={() => resetPassword(email).then(() => toast('已寄出重設密碼信')).catch((e) => toast(e.message, 'err'))}>忘記密碼</button>
           </div>
-          <button className="link small" onClick={() => { setCfg(''); store.update((st) => ({ ...st, settings: { ...st.settings, firebaseConfig: '' } })); initSync(); }}>移除 Firebase 設定</button>
+          <button className="link small" onClick={() => { setCfg(''); store.update((st) => ({ ...st, settings: { ...st.settings, firebaseConfig: '', firebaseOptOut: true } })); initSync(); }}>關閉雲端同步</button>
         </div>
       ) : (
         <div>

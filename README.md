@@ -69,19 +69,14 @@ npm run dev      # http://localhost:5173，行情透過 vite proxy 取得
 npm test         # 指標、手續費、撮合邏輯的單元測試
 ```
 
-## 雲端同步設定（Firebase，免費）
+## 雲端同步
 
-不設定也能用，資料會存在各自裝置；也可以在「設定 → 備份 / 還原」手動搬移。
+App 已內建 Firebase 專案 `stocksim-e9205` 的設定，電腦和手機只要在「設定 → 雲端同步」用同一組 Email 登入即可同步（第一次按「註冊新帳號」）。也可以在同一處改貼自己的 `firebaseConfig`，或關閉同步。
 
-1. 到 <https://console.firebase.google.com> 建立專案（Spark 免費方案）。
-2. **Authentication** → 開始使用 → 登入方式 → 啟用「電子郵件/密碼」。
-3. **Firestore Database** → 建立資料庫 → 正式版模式，區域選 `asia-east1`（台灣）。
-4. Firestore → **規則** 分頁，貼上本資料夾的 `firestore.rules` 內容並「發布」。
-5. 專案設定（齒輪）→ 一般 → 你的應用程式 → 新增「網頁」應用程式 → 複製 `firebaseConfig`。
-6. 在程式「設定 → 雲端同步」貼上，按「儲存並啟用」，第一次按「註冊新帳號」。
-7. 另一台裝置貼上同一份設定，用同一組 Email 登入即可。
+同步方式：任何變更在 1～2 秒內上傳，另一台開著時即時更新；兩台都離線修改時以最後修改的為準，可用「以本機覆蓋雲端／以雲端覆蓋本機」手動處理。
 
-同步方式：任何變更在 1～2 秒內上傳，另一台開著時即時更新。若兩台都在離線時修改，以最後修改的那台為準；可以用「以本機覆蓋雲端／以雲端覆蓋本機」手動處理。
+### Firestore 安全規則自動部署
+`firestore.rules` 修改並推到 `main` 後，`.github/workflows/firestore-rules.yml` 會用 Firebase Rules API 自動部署（先做語法檢查，失敗不會覆蓋線上規則）。需要儲存庫密鑰 `FIREBASE_SERVICE_ACCOUNT`：Google Cloud 服務帳戶金鑰 JSON，角色只給「Firebase Rules Admin」。
 
 ## 專案結構
 ```

@@ -1,0 +1,24 @@
+name: Deploy Firestore rules
+
+# firestore.rules 有修改並推到 main 時，自動部署到 Firebase（專案 stocksim-e9205）
+on:
+  push:
+    branches: [main]
+    paths: ['firestore.rules', 'scripts/deploy_rules.py', '.github/workflows/firestore-rules.yml']
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "::warning::尚未設定 FIREBASE_SERVICE_ACCOUNT 密鑰，略過部署。"
+            exit 0
+          fi
+          pip install --quiet google-auth requests
+          python3 scripts/deploy_rules.py

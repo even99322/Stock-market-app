@@ -1,7 +1,7 @@
 {
   "name": "stocksim",
   "productName": "股市模擬學習平台",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "台股＋美股模擬交易與學習平台",
   "author": "張譯文",
   "main": "electron/main.cjs",

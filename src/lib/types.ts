@@ -125,6 +125,8 @@ export interface Settings {
   initialUSD: number;
   refreshSec: number;
   firebaseConfig: string;
+  /** 使用者主動關閉雲端同步（不再自動套用內建設定） */
+  firebaseOptOut?: boolean;
   /** FinMind API token（選填，可提高查詢上限） */
   finmindToken?: string;
 }
