@@ -1,3 +1,4 @@
+// StockSim Firestore 安全規則：由 .github/workflows/firestore-rules.yml 自動部署
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
