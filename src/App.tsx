@@ -8,6 +8,8 @@ import { useApp } from './lib/store';
 import { initSync, useSync } from './lib/sync';
 import { LearnPage } from './pages/Learn';
 import { MarketPage } from './pages/Market';
+import { SectorsPage } from './pages/Sectors';
+import { CompanyPage } from './pages/Company';
 import { PortfolioPage } from './pages/Portfolio';
 import { ReplayPage } from './pages/Replay';
 import { SettingsPage } from './pages/Settings';
@@ -15,6 +17,7 @@ import { StockPage } from './pages/Stock';
 
 const NAV = [
   { page: 'market', label: '市場', icon: '📈' },
+  { page: 'sectors', label: '板塊', icon: '🧭' },
   { page: 'portfolio', label: '帳戶', icon: '💼' },
   { page: 'replay', label: '回放', icon: '⏪' },
   { page: 'learn', label: '學習', icon: '📘' },
@@ -47,10 +50,12 @@ function Shell() {
     return () => { clearTimeout(first); clearInterval(t); };
   }, []); // eslint-disable-line
 
-  const active = route.page === 'stock' ? 'market' : route.page;
+  const active = route.page === 'stock' ? 'market' : route.page === 'company' ? 'sectors' : route.page;
   let body;
   switch (route.page) {
     case 'stock': body = <StockPage key={route.arg} symbol={route.arg || '2330.TW'} />; break;
+    case 'sectors': body = <SectorsPage />; break;
+    case 'company': body = <CompanyPage key={route.arg} symbol={route.arg || '2330.TW'} />; break;
     case 'portfolio': body = <PortfolioPage />; break;
     case 'replay': body = <ReplayPage key={route.arg || 'home'} id={route.arg} />; break;
     case 'learn': body = <LearnPage />; break;

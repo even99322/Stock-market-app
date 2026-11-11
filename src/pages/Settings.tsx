@@ -45,6 +45,14 @@ export function SettingsPage() {
       </div>
 
       <div className="card">
+        <div className="card-title">財報資料來源</div>
+        <p className="muted small">台股財報與產業分類來自 FinMind（免費、免註冊即可使用，但每小時查詢次數有限）。若常看到「查詢次數上限」錯誤，可到 finmindtrade.com 免費註冊，把 API Token 貼在下面提高上限。美股財報來自 Yahoo Finance。</p>
+        <label className="field"><span>FinMind API Token（選填）</span>
+          <input type="password" value={s.finmindToken || ''} placeholder="未填寫" onChange={(e) => set({ finmindToken: e.target.value.trim() })} />
+        </label>
+      </div>
+
+      <div className="card">
         <div className="card-title">模擬帳戶初始資金（重置帳戶時套用）</div>
         <div className="form-grid">
           {numField('台幣', 'initialTWD', 10000)}

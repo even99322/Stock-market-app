@@ -125,6 +125,8 @@ export interface Settings {
   initialUSD: number;
   refreshSec: number;
   firebaseConfig: string;
+  /** FinMind API token（選填，可提高查詢上限） */
+  finmindToken?: string;
 }
 
 export interface AppState {

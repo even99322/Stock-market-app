@@ -89,6 +89,7 @@ export function StockPage({ symbol }: { symbol: string }) {
             {quote.demo && <span className="badge warn">示範資料</span>}
           </div>
         </div>
+        {!symbol.startsWith('^') && <button className="btn sm ghost" onClick={() => go('company', sym)}>📊 公司・財報</button>}
         <button className={`icon-btn star ${inWatch ? 'on' : ''}`} onClick={toggleWatch} title="加入自選">{inWatch ? '★' : '☆'}</button>
       </div>
       <div className="price-line">

@@ -14,6 +14,7 @@ export const DEFAULT_SETTINGS: Settings = {
   initialUSD: 30_000,
   refreshSec: 30,
   firebaseConfig: '',
+  finmindToken: '',
 };
 
 export function defaultState(): AppState {

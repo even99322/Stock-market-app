@@ -4,7 +4,7 @@ declare global {
   interface Window {
     stockBridge?: {
       platform: 'electron';
-      get: (url: string) => Promise<{ status: number; body: string; error?: string }>;
+      get: (url: string, headers?: Record<string, string>) => Promise<{ status: number; body: string; error?: string }>;
       version: () => Promise<string>;
       update: {
         state: () => Promise<any>;
@@ -36,12 +36,14 @@ const PROXY_MAP: [string, string][] = [
   ['https://query2.finance.yahoo.com', '/px/yf2'],
   ['https://openapi.twse.com.tw', '/px/twse'],
   ['https://www.tpex.org.tw', '/px/tpex'],
+  ['https://api.finmindtrade.com', '/px/fm'],
+  ['https://zh.wikipedia.org', '/px/wiki'],
 ];
 
-async function getText(url: string): Promise<{ status: number; body: string }> {
+async function getText(url: string, headers: Record<string, string> = {}): Promise<{ status: number; body: string }> {
   const p = platform();
   if (p === 'electron') {
-    const r = await window.stockBridge!.get(url);
+    const r = await window.stockBridge!.get(url, headers);
     if (r.status === 0) throw new NetworkError(r.error || 'network');
     return r;
   }
@@ -49,7 +51,7 @@ async function getText(url: string): Promise<{ status: number; body: string }> {
     try {
       const r = await CapacitorHttp.get({
         url,
-        headers: { 'User-Agent': 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/130 Mobile Safari/537.36' },
+        headers: { 'User-Agent': 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/130 Mobile Safari/537.36', ...headers },
         connectTimeout: 15000,
         readTimeout: 20000,
       });
@@ -63,15 +65,15 @@ async function getText(url: string): Promise<{ status: number; body: string }> {
   let u = url;
   for (const [from, to] of PROXY_MAP) if (u.startsWith(from)) u = to + u.slice(from.length);
   try {
-    const r = await fetch(u);
+    const r = await fetch(u, { headers });
     return { status: r.status, body: await r.text() };
   } catch (e) {
     throw new NetworkError(String(e));
   }
 }
 
-export async function getJSON<T = any>(url: string): Promise<T> {
-  const r = await getText(url);
+export async function getJSON<T = any>(url: string, headers?: Record<string, string>): Promise<T> {
+  const r = await getText(url, headers);
   let data: any;
   try {
     data = JSON.parse(r.body);

@@ -23,6 +23,8 @@ export default defineConfig({
       '/px/yf2': px('https://query2.finance.yahoo.com'),
       '/px/twse': px('https://openapi.twse.com.tw'),
       '/px/tpex': px('https://www.tpex.org.tw'),
+      '/px/fm': px('https://api.finmindtrade.com'),
+      '/px/wiki': px('https://zh.wikipedia.org'),
     },
   },
   build: { outDir: 'dist', chunkSizeWarningLimit: 2000 },

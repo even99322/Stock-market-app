@@ -2,7 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('stockBridge', {
   platform: 'electron',
-  get: (url) => ipcRenderer.invoke('http-get', url),
+  get: (url, headers) => ipcRenderer.invoke('http-get', url, headers),
   version: () => ipcRenderer.invoke('app-version'),
   update: {
     state: () => ipcRenderer.invoke('update-state'),

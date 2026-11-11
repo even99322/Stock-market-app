@@ -9,6 +9,8 @@ const ALLOWED_HOSTS = [
   'query2.finance.yahoo.com',
   'openapi.twse.com.tw',
   'www.tpex.org.tw',
+  'api.finmindtrade.com',
+  'zh.wikipedia.org',
 ];
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
@@ -23,12 +25,14 @@ const MIME = {
   '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.woff2': 'font/woff2',
 };
 
-ipcMain.handle('http-get', async (_e, url) => {
+ipcMain.handle('http-get', async (_e, url, extra) => {
   let host;
   try { host = new URL(url).host; } catch { return { status: 0, body: '', error: 'bad url' }; }
   if (!ALLOWED_HOSTS.includes(host)) return { status: 0, body: '', error: 'host not allowed' };
   try {
-    const res = await net.fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json,*/*' } });
+    const headers = { 'User-Agent': UA, Accept: 'application/json,*/*' };
+    if (extra && typeof extra === 'object') for (const [k, v] of Object.entries(extra)) if (typeof v === 'string') headers[k] = v;
+    const res = await net.fetch(url, { headers });
     return { status: res.status, body: await res.text() };
   } catch (err) {
     return { status: 0, body: '', error: String(err) };
