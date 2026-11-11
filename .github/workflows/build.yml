@@ -1,4 +1,5 @@
 name: Build & Release
+# 觸發條件：push 到 main 或在 Actions 頁面手動執行（Run workflow）
 
 # 推到 main 時建置；若 package.json 的版本還沒有對應的 Release，就自動發布 v<版本>。
 # 電腦版與手機版會從 Releases 的「Latest」自動更新。
