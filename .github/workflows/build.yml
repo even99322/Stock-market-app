@@ -59,15 +59,18 @@ jobs:
             ./gradlew assembleRelease --no-daemon
             cp app/build/outputs/apk/release/app-release.apk ../StockSim-${{ needs.prepare.outputs.version }}.apk
           else
-            if [ "${{ needs.prepare.outputs.release }}" = "true" ]; then
-              echo "::error::缺少 ANDROID_KEYSTORE_BASE64 / ANDROID_KEYSTORE_PASSWORD 密鑰，無法發布正式版（自動更新需要固定簽章）。請到 Settings → Secrets and variables → Actions 新增後重新執行。"
-              exit 1
-            fi
             ./gradlew assembleDebug --no-daemon
             cp app/build/outputs/apk/debug/app-debug.apk ../StockSim-${{ needs.prepare.outputs.version }}-debug.apk
           fi
       - uses: actions/upload-artifact@v4
         with: { name: android, path: 'StockSim-*.apk' }
+      - name: Check signing secrets
+        if: needs.prepare.outputs.release == 'true'
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::error::缺少 ANDROID_KEYSTORE_BASE64 / ANDROID_KEYSTORE_PASSWORD 密鑰，無法發布正式版（自動更新需要固定簽章）。請到 Settings → Secrets and variables → Actions 新增後重新執行。"
+            exit 1
+          fi
 
   windows:
     needs: prepare
