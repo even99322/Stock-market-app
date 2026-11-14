@@ -1,7 +1,8 @@
-import urllib.request, os, gzip, time, json, urllib.parse
+import urllib.request, os, gzip, time, json, urllib.parse, re, html
 os.makedirs("samples", exist_ok=True)
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0 Safari/537.36"
 def get(url):
+    err = ""
     for k in range(3):
         try:
             with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": UA}), timeout=60) as r:
@@ -9,28 +10,39 @@ def get(url):
                 if r.headers.get("Content-Encoding") == "gzip": b = gzip.decompress(b)
                 return b
         except Exception as e:
-            err = str(e); time.sleep(2)
-    return json.dumps({"err": err}).encode()
-def chart(sym, rng, itv):
-    d = json.loads(get(f"https://query1.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(sym)}?range={rng}&interval={itv}&includePrePost=false"))
-    try:
-        r = d["chart"]["result"][0]; q = r["indicators"]["quote"][0]; ts = r.get("timestamp") or []
-        rows = [[ts[i], q["open"][i], q["high"][i], q["low"][i], q["close"][i], q["volume"][i]] for i in range(len(ts)) if q["close"][i] is not None and q["open"][i] is not None]
-        rows = [[t, round(o, 2), round(h, 2), round(l, 2), round(c, 2), int(v or 0)] for t, o, h, l, c, v in rows]
-        return {"gmtoffset": r["meta"].get("gmtoffset"), "name": r["meta"].get("longName") or r["meta"].get("shortName"), "bars": rows}
-    except Exception as e:
-        return {"err": str(d)[:300]}
-TW = ["2330","2317","2454","2308","2382","3231","6669","2303","3711","2345","3017","3324","3661","3443","2603","2609","2615","2618","2881","2882","2891","1519","1503","2408","2344","8299","3008","2379","3034","2376","2356","4938","2059","3037","2383","6446","2002","1303","1301","2412","2912","0050","0056","00878"]
-TWO = ["6488","5347","3293","5483","8069","6274","3105"]
-US = ["NVDA","AAPL","TSLA","AMD","MSFT","META","AMZN","GOOGL","MU","AVGO","SMCI","TSM","INTC","PLTR"]
-IDX = ["^TWII","^GSPC","^IXIC","^SOX","^VIX","TWD=X"]
-daily = {}
-for s in [x + ".TW" for x in TW] + [x + ".TWO" for x in TWO] + US + IDX:
-    daily[s] = chart(s, "2y", "1d"); time.sleep(0.4)
-json.dump(daily, open("samples/daily.json", "w"), separators=(",", ":"))
-intra = {}
-for s in ["2330.TW","2317.TW","3017.TW","2603.TW","2382.TW","^TWII"]:
-    intra[s] = chart(s, "60d", "5m"); time.sleep(0.5)
-json.dump(intra, open("samples/intra5m.json", "w"), separators=(",", ":"))
-print({k: len(v.get("bars", [])) for k, v in daily.items()})
-print({k: len(v.get("bars", [])) for k, v in intra.items()})
+            err = str(e); time.sleep(3)
+    return ("ERR " + err).encode()
+Q = [("umc_a","聯電","2026-01-06","2026-01-10"),("umc_b","聯電","2026-01-15","2026-01-22"),("umc_c","聯電","2026-01-26","2026-01-31"),
+     ("hh_a","鴻海","2026-02-24","2026-02-28"),("hh_b","鴻海","2026-03-02","2026-03-06"),
+     ("lg_a","大立光","2025-12-19","2025-12-24"),("lg_b","大立光","2025-12-28","2025-12-31"),
+     ("mk_a","台股 大盤","2026-03-02","2026-03-05"),("mk_b","台股 大盤","2026-03-08","2026-03-12"),("mk_c","台股 大盤","2026-03-30","2026-04-02"),("mk_d","台股 大盤","2026-04-07","2026-04-09"),("mk_e","台股 大盤","2025-11-20","2025-11-23"),
+     ("eva","長榮航","2026-02-28","2026-03-06"),("ym","陽明 貨櫃","2026-03-01","2026-03-07"),
+     ("tsm_a","台積電 法說","2026-01-14","2026-01-18"),("tsm_b","台積電","2026-02-01","2026-02-08"),("mtk","聯發科","2026-01-22","2026-01-27")]
+news = {}
+for key, q, a, b in Q:
+    u = "https://news.google.com/rss/search?hl=zh-TW&gl=TW&ceid=TW:zh-Hant&q=" + urllib.parse.quote(f"{q} after:{a} before:{b}")
+    x = get(u).decode("utf8", "replace")
+    items = []
+    for it in re.findall(r"<item>(.*?)</item>", x, re.S)[:60]:
+        g = lambda tag: (re.search(rf"<{tag}[^>]*>(.*?)</{tag}>", it, re.S) or [None, ""])[1]
+        items.append({"t": html.unescape(g("title")), "s": html.unescape(g("source")), "d": g("pubDate"), "l": g("link")})
+    news[key] = {"q": q, "a": a, "b": b, "n": len(items), "items": items, "raw": x[:200] if not items else ""}
+    time.sleep(1.2)
+json.dump(news, open("samples/news.json", "w"), ensure_ascii=False, separators=(",", ":"))
+FM = "https://api.finmindtrade.com/api/v4/data?dataset={}&data_id={}&start_date={}&end_date={}"
+fm = {}
+for sid in ["2303", "2317", "3008", "2330", "2618", "2609"]:
+    fm[sid] = {}
+    for ds, a, b in [("TaiwanStockMonthRevenue", "2025-01-01", "2026-07-01"), ("TaiwanStockFinancialStatements", "2025-01-01", "2026-07-01"),
+                     ("TaiwanStockInstitutionalInvestorsBuySell", "2025-11-10", "2026-05-25"), ("TaiwanStockMarginPurchaseShortSale", "2025-11-10", "2026-05-25")]:
+        try:
+            d = json.loads(get(FM.format(ds, sid, a, b)))
+            rows = d.get("data", [])
+            if ds == "TaiwanStockFinancialStatements": rows = [r for r in rows if r["type"] in ("EPS", "Revenue", "GrossProfit", "OperatingIncome", "IncomeAfterTaxes")]
+            fm[sid][ds] = {"msg": d.get("msg"), "rows": rows}
+        except Exception as e:
+            fm[sid][ds] = {"msg": str(e), "rows": []}
+        time.sleep(1.2)
+json.dump(fm, open("samples/fm.json", "w"), ensure_ascii=False, separators=(",", ":"))
+print({k: v["n"] for k, v in news.items()})
+print({k: {d: len(x["rows"]) for d, x in v.items()} for k, v in fm.items()})
