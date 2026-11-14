@@ -7,6 +7,7 @@ import { sma, bollinger, rsi, macd, kd, obv, type Series } from '../lib/indicato
 import { cls, dateStr, fmtChartTime, fmtPrice, fmtVol } from '../lib/format';
 import type { Bar, Market, Trade } from '../lib/types';
 
+export interface ChartNote { time: number; text: string; pos?: 'above' | 'below'; color?: string }
 export type SubKind = 'none' | 'rsi' | 'macd' | 'kd' | 'obv';
 export interface Overlays { ma: boolean; boll: boolean }
 
@@ -23,6 +24,12 @@ interface Props {
   /** 回放時固定顯示最後 N 根 */
   visibleBars?: number;
   hideDates?: boolean;
+  /** 圖上的文字標記（教學用）。time 為 K 線的 time */
+  notes?: ChartNote[];
+  /** 水平參考線（支撐、壓力、停損價…） */
+  lines?: { price: number; title: string; color?: string }[];
+  /** 額外的疊加線（例如均價線），values 與 bars 等長 */
+  extra?: { color: string; values: (number | null)[] }[];
   /** 昨收價：提供時畫出「昨收」參考線，標籤的漲跌幅也以它為基準（1 日圖用） */
   baseline?: number;
 }
@@ -115,9 +122,22 @@ export function PriceChart(p: Props) {
       main.addLineSeries(o).setData(line(ind.boll.lower));
     }
 
-    if (p.trades?.length) {
+    for (const ln of p.lines || []) {
+      candle.createPriceLine({ price: ln.price, color: ln.color || '#f5c542', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: ln.title });
+    }
+    for (const ex of p.extra || []) {
+      main.addLineSeries({ color: ex.color, lineWidth: 2, lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false })
+        .setData(ex.values.flatMap((v, i) => (v == null ? [] : [{ time: T[i], value: v }])));
+    }
+    if (p.trades?.length || p.notes?.length) {
       const markers: SeriesMarker<Time>[] = [];
-      for (const t of p.trades) {
+      for (const nt of p.notes || []) {
+        const idx = p.bars.findIndex((b) => b.time === nt.time);
+        if (idx < 0) continue;
+        const below = nt.pos === 'below';
+        markers.push({ time: T[idx], position: below ? 'belowBar' : 'aboveBar', color: nt.color || '#f5c542', shape: below ? 'arrowUp' : 'arrowDown', text: nt.text });
+      }
+      for (const t of p.trades || []) {
         const ts = t.time / 1000;
         let idx = -1;
         for (let i = 0; i < p.bars.length; i++) if (p.bars[i].time <= ts) idx = i;
@@ -201,7 +221,7 @@ export function PriceChart(p: Props) {
       el.removeEventListener('touchmove', onTouch);
       charts.forEach((c) => c.remove());
     };
-  }, [p.bars, p.overlays.ma, p.overlays.boll, p.sub, p.redUp, p.trades, toTime, ind, p.visibleBars, p.hideDates, p.market, p.intraday, p.baseline, touchInspect]);
+  }, [p.bars, p.overlays.ma, p.overlays.boll, p.sub, p.redUp, p.trades, toTime, ind, p.visibleBars, p.hideDates, p.market, p.intraday, p.baseline, touchInspect, p.notes, p.lines, p.extra]);
 
   const li = legend?.i ?? p.bars.length - 1;
   const lb = legend?.bar ?? p.bars[p.bars.length - 1];

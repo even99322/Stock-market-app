@@ -361,3 +361,48 @@ code { background: var(--bg); padding: 1px 5px; border-radius: 4px; }
 }
 .risk { border-top: 1px dashed var(--line); padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
 .field .row .btn.sm { padding: 5px 7px; }
+
+/* ---- 短線交易課程 ---- */
+.progress { height: 6px; border-radius: 99px; background: var(--panel2); overflow: hidden; }
+.progress i { display: block; height: 100%; background: var(--accent); border-radius: 99px; transition: width .3s; }
+.course-entry { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.course-entry p { margin: 0; line-height: 1.6; }
+.lesson-row { cursor: pointer; }
+.lesson-row:hover { background: var(--panel2); }
+.lesson { max-width: 860px; }
+.lesson-title { margin: 2px 0 0; font-size: 20px; line-height: 1.35; }
+.lesson-body { gap: 14px; font-size: 15px; line-height: 1.75; }
+.lesson-body p { margin: 0; }
+.lesson-body b { color: #fff; }
+.lesson-h { margin: 10px 0 0; font-size: 16px; padding-left: 10px; border-left: 3px solid var(--accent); line-height: 1.4; }
+.lesson-ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.lesson-body pre.formula { margin: 0; white-space: pre-wrap; word-break: break-word; background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 13.5px; line-height: 1.7; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.lesson-table td, .lesson-table th { white-space: normal; text-align: left; vertical-align: top; min-width: 84px; line-height: 1.5; }
+.callout { border-radius: 10px; padding: 10px 12px; border: 1px solid var(--line); background: var(--panel2); font-size: 14px; }
+.callout.tip { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.callout.warn { border-color: #6b5520; background: color-mix(in srgb, #f5c542 9%, var(--panel2)); }
+.fig { margin: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.fig-title { font-weight: 600; font-size: 14px; }
+.fig figcaption { font-size: 13px; color: var(--muted); line-height: 1.6; }
+.fig figcaption b { color: var(--text); }
+.lesson-news { display: flex; flex-direction: column; gap: 6px; border-left: 3px solid var(--line); padding-left: 10px; }
+.lesson-news .news-item { display: block; text-decoration: none; color: var(--text); padding: 6px 8px; border-radius: 8px; background: var(--panel2); }
+.lesson-news .news-title { font-size: 14px; line-height: 1.5; }
+.quiz, .decide { border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; background: color-mix(in srgb, var(--accent) 5%, var(--panel)); }
+.decide { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+.decide-head { font-weight: 700; }
+.quiz-q { font-weight: 600; line-height: 1.65; }
+.quiz-opts { display: flex; flex-direction: column; gap: 8px; }
+.quiz-opt { text-align: left; border: 1px solid var(--line); background: var(--panel2); color: var(--text); border-radius: 10px; padding: 10px 12px; cursor: pointer; font-size: 14.5px; line-height: 1.5; }
+.quiz-opt:not(:disabled):hover { border-color: var(--accent); }
+.quiz-opt:disabled { cursor: default; opacity: .75; }
+.quiz-opt.right { border-color: #22b07d; background: color-mix(in srgb, #22b07d 16%, var(--panel2)); opacity: 1; }
+.quiz-opt.wrong { border-color: #f5c542; background: color-mix(in srgb, #f5c542 12%, var(--panel2)); opacity: 1; }
+.quiz-why { font-size: 14px; line-height: 1.75; border-left: 3px solid #f5c542; padding-left: 10px; }
+.quiz-why.ok { border-left-color: #22b07d; }
+.go-btn { align-self: flex-start; }
+.lesson-nav { margin-top: 4px; }
+.tr.lesson-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.tr.lesson-row .name { white-space: normal; overflow: visible; flex: 1; min-width: 0; line-height: 1.45; }
+.tr.lesson-row .name b { white-space: normal; }
+.tr.lesson-row .num { flex-shrink: 0; }

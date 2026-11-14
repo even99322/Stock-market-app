@@ -10,6 +10,7 @@ import { LearnPage } from './pages/Learn';
 import { MarketPage } from './pages/Market';
 import { SectorsPage } from './pages/Sectors';
 import { CompanyPage } from './pages/Company';
+import { CoursePage } from './pages/Course';
 import { PortfolioPage } from './pages/Portfolio';
 import { ReplayPage } from './pages/Replay';
 import { SettingsPage } from './pages/Settings';
@@ -50,7 +51,7 @@ function Shell() {
     return () => { clearTimeout(first); clearInterval(t); };
   }, []); // eslint-disable-line
 
-  const active = route.page === 'stock' ? 'market' : route.page === 'company' ? 'sectors' : route.page;
+  const active = route.page === 'stock' ? 'market' : route.page === 'company' ? 'sectors' : route.page === 'course' ? 'learn' : route.page;
   let body;
   switch (route.page) {
     case 'stock': body = <StockPage key={route.arg} symbol={route.arg || '2330.TW'} />; break;
@@ -59,6 +60,7 @@ function Shell() {
     case 'portfolio': body = <PortfolioPage />; break;
     case 'replay': body = <ReplayPage key={route.arg || 'home'} id={route.arg} />; break;
     case 'learn': body = <LearnPage />; break;
+    case 'course': body = <CoursePage key={route.arg || 'home'} id={route.arg} />; break;
     case 'settings': body = <SettingsPage />; break;
     default: body = <MarketPage />;
   }

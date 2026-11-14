@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { TopicView, go } from '../components/ui';
 import { TOPICS } from '../lib/learn';
+import { CourseEntry } from './Course';
 
 const CATS = [...new Set(TOPICS.map((t) => t.cat))];
 
@@ -12,6 +13,7 @@ export function LearnPage() {
   return (
     <div className="page">
       <div className="page-head"><h2>學習中心</h2></div>
+      <CourseEntry />
       <div className="card guide">
         <div className="card-title">建議學習路線</div>
         <ol>

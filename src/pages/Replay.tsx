@@ -8,7 +8,7 @@ import { calcFees } from '../lib/fees';
 import { maxBuyQty, replayTrade, uid } from '../lib/engine';
 import { cls, dateStr, fmtMoney, fmtNum, fmtPct, fmtPrice } from '../lib/format';
 import { fetchChart } from '../lib/market';
-import { BUILTIN, type SymbolInfo } from '../lib/names';
+import { BUILTIN, lookupName, type SymbolInfo } from '../lib/names';
 import { maxDrawdown } from '../lib/stats';
 import { store, useApp } from '../lib/store';
 import type { ChartData, ReplaySession, Side } from '../lib/types';
@@ -16,10 +16,13 @@ import type { ChartData, ReplaySession, Side } from '../lib/types';
 const MIN_HISTORY = 60;
 
 export function ReplayPage({ id }: { id?: string }) {
+  // #/replay/new:2303.TW:2025-12-22 → 由課程連結直接建立這檔股票、這個日期的回放
+  const m = /^new:([^:]+):(\d{4}-\d{2}-\d{2})$/.exec(id || '');
+  if (m) return <ReplayHome auto={{ symbol: m[1], date: m[2] }} />;
   return id ? <SessionView id={id} /> : <ReplayHome />;
 }
 
-function ReplayHome() {
+function ReplayHome({ auto }: { auto?: { symbol: string; date: string } }) {
   const app = useApp();
   const { toast, help } = useUi();
   const [pick, setPick] = useState<SymbolInfo | null>(null);
@@ -55,13 +58,17 @@ function ReplayHome() {
       };
       store.update((s) => ({ ...s, replays: [sess, ...s.replays].slice(0, 30) }));
       if (data.demo) toast('目前離線，使用示範資料進行回放', 'info');
-      go('replay', sess.id);
+      if (auto) location.replace(`#/replay/${sess.id}`); else go('replay', sess.id);
     } catch (e: any) {
       toast(e.message || String(e), 'err');
     } finally {
       setBusy(false);
     }
   };
+
+  useEffect(() => {
+    if (auto) create({ symbol: auto.symbol, name: lookupName(auto.symbol) || auto.symbol, market: /\.(TW|TWO)$/.test(auto.symbol) ? 'TW' : 'US' }, auto.date, false);
+  }, []); // eslint-disable-line
 
   const random = () => {
     const pool = BUILTIN.filter((x) => x.kind !== 'index');

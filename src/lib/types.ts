@@ -139,5 +139,7 @@ export interface AppState {
   replays: ReplaySession[];
   watchlist: string[];
   settings: Settings;
+  /** 課程進度：lessonId → 完成時間 */
+  course?: { done: Record<string, number> };
   updatedAt: number;
 }
