@@ -2,6 +2,7 @@ import { getJSON, HttpError, NetworkError } from './http';
 import { demoChart } from './demo';
 import { digitsOf, isForeign, isIndex, kindOf, lookupName, marketOf } from './names';
 import { fetchTxChart, isTaifex } from './taifex';
+import { cleanSpikes, fxLooksBroken, fxPairOf, synthChart, USDTWD } from './fxcross';
 import type { Bar, ChartData } from './types';
 
 /** 圖表區間 → Yahoo range/interval */
@@ -86,7 +87,8 @@ export async function fetchChart(symbol: string, range = '6mo', force = false): 
   let data: ChartData;
   try {
     try {
-      data = isTaifex(symbol) ? await fetchTxChart(symbol, range) : await fetchYahoo(symbol, range);
+      data = isTaifex(symbol) ? await fetchTxChart(symbol, range) : fxPairOf(symbol) ? await fetchFxPair(symbol, range, force) : await fetchYahoo(symbol, range);
+      if (data.kind === 'fx' && data.intraday && !fxPairOf(symbol)) data = { ...data, bars: cleanSpikes(data.bars) };
     } catch (e) {
       // 上市找不到就試上櫃
       if (e instanceof HttpError && /^\d{4,6}[A-Z]?\.TW$/.test(symbol)) {
@@ -108,6 +110,29 @@ export async function fetchChart(symbol: string, range = '6mo', force = false): 
   cache.set(key, data);
   if (data.symbol !== symbol) cache.set(`${data.symbol}|${range}`, data);
   return data;
+}
+
+/**
+ * 外幣兌台幣：同時取直接報價與「美元/台幣 × 美元腿」的換算值。
+ * 人民幣一律用換算值；其他幣別在直接報價明顯偏離換算值時才改用換算值。
+ */
+async function fetchFxPair(symbol: string, range: string, force: boolean): Promise<ChartData> {
+  const p = fxPairOf(symbol)!;
+  const name = lookupName(symbol) || symbol;
+  const [twd, leg, direct] = await Promise.all([
+    fetchChart(USDTWD, range, force),
+    fetchChart(p.leg, range, force),
+    p.always ? Promise.resolve(null) : fetchYahoo(symbol, range).catch(() => null),
+  ]);
+  if (twd.demo || leg.demo) throw new NetworkError('離線');
+  const synth = synthChart(symbol, name, twd, leg, p);
+  const base = direct || twd;
+  const kind = 'fx' as const;
+  const digits = digitsOf(kind, synth.price);
+  if (direct && !fxLooksBroken(direct, synth)) return { ...direct, bars: direct.intraday ? cleanSpikes(direct.bars) : direct.bars };
+  return { ...synth, kind, digits, volUnit: 'none', ccy: p.inverse ? p.ccy : 'TWD', market: base.market, currency: base.currency, tradable: false,
+    // 只有 1 年以上的區間才算 52 週高低，其餘交給個股頁另外抓的 1 年走勢
+    ...(['1y', '5y'].includes(range) && synth.bars.length ? { high52: Math.max(...synth.bars.slice(-252).map((b) => b.high)), low52: Math.min(...synth.bars.slice(-252).map((b) => b.low)) } : {}) };
 }
 
 export interface Quote {

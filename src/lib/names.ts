@@ -63,7 +63,7 @@ const BUILTIN_RAW: [string, string, Market, SymbolInfo['kind']?][] = [
   ['^TA125.TA', '以色列 TA-125', 'US', 'index'], ['^J203.JO', '南非全股指數', 'US', 'index'], ['XU100.IS', '土耳其 BIST 100', 'US', 'index'],
   ['GBPTWD=X', '英鎊/台幣', 'US', 'index'], ['AUDTWD=X', '澳幣/台幣', 'US', 'index'], ['CADTWD=X', '加幣/台幣', 'US', 'index'],
   ['SGDTWD=X', '新加坡幣/台幣', 'US', 'index'], ['KRWTWD=X', '韓元/台幣', 'US', 'index'], ['THBTWD=X', '泰銖/台幣', 'US', 'index'],
-  ['CHFTWD=X', '瑞士法郎/台幣', 'US', 'index'], ['NZDTWD=X', '紐幣/台幣', 'US', 'index'], ['TWDCNY=X', '台幣/人民幣', 'US', 'index'],
+  ['CHFTWD=X', '瑞士法郎/台幣', 'US', 'index'], ['NZDTWD=X', '紐幣/台幣', 'US', 'index'], ['TWDCNY=X', '台幣/人民幣', 'US', 'index'], ['CNYTWD=X', '人民幣/台幣', 'US', 'index'],
   ['GBPUSD=X', '英鎊/美元', 'US', 'index'], ['AUDUSD=X', '澳幣/美元', 'US', 'index'], ['NZDUSD=X', '紐幣/美元', 'US', 'index'],
   ['CAD=X', '美元/加幣', 'US', 'index'], ['CHF=X', '美元/瑞士法郎', 'US', 'index'], ['HKD=X', '美元/港幣', 'US', 'index'],
   ['SGD=X', '美元/新加坡幣', 'US', 'index'], ['INR=X', '美元/印度盧比', 'US', 'index'], ['THB=X', '美元/泰銖', 'US', 'index'],

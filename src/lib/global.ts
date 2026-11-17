@@ -75,7 +75,7 @@ export const GLOBAL_GROUPS: GGroup[] = [
     it('NZDTWD=X', '紐幣', '1 紐幣換多少台幣'),
     it('CADTWD=X', '加幣', '和油價連動'),
     it('CHFTWD=X', '瑞士法郎', '避險貨幣'),
-    it('TWDCNY=X', '台幣→人民幣', '注意方向相反：1 台幣換多少人民幣，數字上升＝台幣變貴'),
+    it('CNYTWD=X', '人民幣', '1 人民幣換多少台幣（以美元匯率換算）'),
   ] },
   { id: 'fx-major', cat: 'fx', title: '主要貨幣', note: '「A/B」是 1 單位 A 可換多少 B', items: [
     it('DX-Y.NYB', '美元指數', '美元對六種主要貨幣的強弱'),
