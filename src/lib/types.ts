@@ -12,7 +12,15 @@ export interface Bar {
   volume: number;
 }
 
+/** 標的種類：決定小數位數、成交量單位與說明文字 */
+export type InstKind = 'stock' | 'index' | 'fx' | 'rate' | 'future' | 'crypto';
+
 export interface ChartData {
+  kind?: InstKind;
+  /** 價格顯示的小數位數（匯率、商品期貨需要比 2 位更多） */
+  digits?: number;
+  /** 成交量單位：期貨為「口」；匯率、利率沒有成交量 */
+  volUnit?: '口' | 'none';
   symbol: string;
   name: string;
   market: Market;

@@ -20,7 +20,7 @@ const TW_FROM_ADR: Record<string, RelItem> = {
 };
 
 export function relatedMarkets(symbol: string, industry?: string): RelGroup[] {
-  const tw = /\.(TW|TWO)$/.test(symbol) || symbol === '^TWII';
+  const tw = /\.(TW|TWO|TAIFEX)$/.test(symbol) || symbol === '^TWII';
   const themes = themesOf(symbol).map((t) => t.id);
   const semi = themes.some((t) => SEMI_THEMES.has(t)) || /半導體|電子|電腦|光電|通信/.test(industry || '');
   const fin = themes.includes('finance') || /金融/.test(industry || '');

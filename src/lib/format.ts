@@ -1,8 +1,8 @@
 import type { Currency, Market } from './types';
 
-export function fmtPrice(p: number | undefined | null, market?: Market) {
+export function fmtPrice(p: number | undefined | null, market?: Market, digits?: number) {
   if (p == null || !Number.isFinite(p)) return '—';
-  const d = market === 'US' || Math.abs(p) < 100 ? 2 : Math.abs(p) >= 10000 ? 0 : 2;
+  const d = digits ?? (market === 'US' || Math.abs(p) < 100 ? 2 : Math.abs(p) >= 10000 ? 0 : 2);
   return p.toLocaleString('zh-TW', { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 
@@ -24,8 +24,9 @@ export function fmtPct(x: number | undefined | null, sign = true, d = 2) {
   return `${sign && x > 0 ? '+' : ''}${(x * 100).toFixed(d)}%`;
 }
 
-export function fmtVol(v: number, market: Market) {
-  if (!Number.isFinite(v)) return '—';
+export function fmtVol(v: number, market: Market, unit?: '口' | 'none') {
+  if (!Number.isFinite(v) || unit === 'none') return '—';
+  if (unit === '口') return v >= 1e4 ? `${(v / 1e4).toFixed(2)} 萬口` : `${fmtNum(v)} 口`;
   if (market === 'TW') {
     const lots = v / 1000;
     return lots >= 10000 ? `${(lots / 10000).toFixed(2)} 萬張` : `${fmtNum(lots)} 張`;

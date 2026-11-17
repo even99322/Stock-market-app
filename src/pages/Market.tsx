@@ -6,6 +6,7 @@ import { cls, fmtPct, fmtPrice } from '../lib/format';
 import { dataStatus, fetchQuote, type Quote } from '../lib/market';
 import { lookupName } from '../lib/names';
 import { store, useApp } from '../lib/store';
+import { GlobalStrip } from './Global';
 
 const INDICES = ['^TWII', '^GSPC', '^IXIC'];
 
@@ -74,6 +75,8 @@ export function MarketPage() {
         })}
       </div>
 
+      <GlobalStrip />
+
       <div className="card">
         <div className="card-title">自選股 <span className="muted small">（在個股頁按 ☆ 加入）</span><Help id="change" /></div>
         <div className="table watch">
@@ -86,7 +89,7 @@ export function MarketPage() {
                   <b>{ok ? q.name : lookupName(s) || s}</b>
                   <span className="muted small">{s.replace(/\.(TW|TWO)$/, '')} {s.endsWith('.TWO') ? '櫃' : ''}{ok && q.isOpen ? ' · 交易中' : ''}</span>
                 </div>
-                <div className={`num ${ok ? cls(q.change) : ''}`}>{ok ? fmtPrice(q.price, q.market) : q === 'err' ? '—' : '…'}</div>
+                <div className={`num ${ok ? cls(q.change) : ''}`}>{ok ? fmtPrice(q.price, q.market, q.digits) : q === 'err' ? '—' : '…'}</div>
                 <div className={`num pill ${ok ? cls(q.change) : ''}`}>{ok ? fmtPct(q.changePct / 100) : ''}</div>
                 <div className="ops" onClick={(e) => e.stopPropagation()}>
                   <button className="icon-btn" onClick={() => move(s, -1)} title="上移">↑</button>

@@ -7,7 +7,9 @@ import { RelatedMarkets } from '../components/RelatedMarkets';
 import { TradePanel } from '../components/TradePanel';
 import { go, Help, Seg, Spinner, Stat } from '../components/ui';
 import { cls, fmtMoney, fmtNum, fmtPct, fmtPrice, fmtTime, fmtVol } from '../lib/format';
+import { kindNote } from '../lib/global';
 import { fetchChart, RANGES } from '../lib/market';
+import { isTaifex } from '../lib/taifex';
 import { getFundamental, isIndex, loadTwData } from '../lib/names';
 import { industryOf, loadTwSnapshot } from '../lib/twmarket';
 import { priceStats } from '../lib/stats';
@@ -15,10 +17,16 @@ import { store, useApp } from '../lib/store';
 import type { ChartData } from '../lib/types';
 
 const RANGE_KEYS = ['1d', '5d', '1mo', '6mo', '1y', '5y'];
+const DAILY_ONLY = ['1mo', '6mo', '1y'];
 
 export function StockPage({ symbol }: { symbol: string }) {
   const app = useApp();
-  const [range, setRange] = useState(() => localStorage.getItem('stocksim.range') || '6mo');
+  const dailyOnly = isTaifex(symbol);
+  const [range, setRangeRaw] = useState(() => {
+    const r = localStorage.getItem('stocksim.range') || '6mo';
+    return dailyOnly && !DAILY_ONLY.includes(r) ? '6mo' : r;
+  });
+  const setRange = (r: string) => { setRangeRaw(r); if (!dailyOnly || r !== '6mo') localStorage.setItem('stocksim.range', r); };
   const [overlays, setOverlays] = useState<Overlays>({ ma: true, boll: false });
   const [sub, setSub] = useState<SubKind>(() => (localStorage.getItem('stocksim.sub') as SubKind) || 'kd');
   const [chart, setChart] = useState<ChartData | null>(null);
@@ -55,7 +63,6 @@ export function StockPage({ symbol }: { symbol: string }) {
     }, app.settings.refreshSec * 1000);
     return () => clearInterval(t);
   }, [symbol, range, app.settings.refreshSec]);
-  useEffect(() => { localStorage.setItem('stocksim.range', range); }, [range]);
   useEffect(() => { localStorage.setItem('stocksim.sub', sub); }, [sub]);
 
   const stats = useMemo(() => (daily ? priceStats(daily.bars) : null), [daily]);
@@ -85,6 +92,10 @@ export function StockPage({ symbol }: { symbol: string }) {
   const pos = app.account.positions[sym];
   const mk = quote.market;
   const cur = quote.currency;
+  const dg = quote.digits;
+  const vu = quote.volUnit;
+  const P = (v: number | undefined | null) => fmtPrice(v, mk, dg);
+  const note = !quote.tradable ? kindNote(quote.kind, sym) : null;
 
   return (
     <div className="page">
@@ -101,8 +112,8 @@ export function StockPage({ symbol }: { symbol: string }) {
         <button className={`icon-btn star ${inWatch ? 'on' : ''}`} onClick={toggleWatch} title="加入自選">{inWatch ? '★' : '☆'}</button>
       </div>
       <div className="price-line">
-        <span className={`price ${cls(change)}`}>{fmtPrice(quote.price, mk)}</span>
-        <span className={cls(change)}>{change > 0 ? '▲' : change < 0 ? '▼' : ''}{fmtPrice(Math.abs(change), mk)} ({fmtPct(pct)})</span>
+        <span className={`price ${cls(change)}`}>{P(quote.price)}</span>
+        <span className={cls(change)}>{change > 0 ? '▲' : change < 0 ? '▼' : ''}{P(Math.abs(change))} ({fmtPct(pct)})</span>
         <Help id="change" />
       </div>
 
@@ -113,7 +124,7 @@ export function StockPage({ symbol }: { symbol: string }) {
         <div className="stock-main">
           <div className="card chart-card">
             <div className="chart-tools">
-              <Seg small value={range} onChange={setRange} options={RANGE_KEYS.map((k) => ({ v: k, label: RANGES[k].label }))} />
+              <Seg small value={range} onChange={setRange} options={(dailyOnly ? DAILY_ONLY : RANGE_KEYS).map((k) => ({ v: k, label: RANGES[k].label }))} />
               <div className="row gap">
                 <label className="chk"><input type="checkbox" checked={overlays.ma} onChange={(e) => setOverlays({ ...overlays, ma: e.target.checked })} />均線<Help id="ma" /></label>
                 <label className="chk"><input type="checkbox" checked={overlays.boll} onChange={(e) => setOverlays({ ...overlays, boll: e.target.checked })} />布林<Help id="boll" /></label>
@@ -129,7 +140,7 @@ export function StockPage({ symbol }: { symbol: string }) {
               </div>
             </div>
             <PriceChart
-              bars={chart.bars} intraday={chart.intraday} gmtoffset={chart.gmtoffset} market={mk}
+              bars={chart.bars} intraday={chart.intraday} gmtoffset={chart.gmtoffset} market={mk} digits={dg} volUnit={vu}
               overlays={overlays} sub={sub} redUp={app.settings.redUp} trades={trades}
               baseline={range === '1d' ? chart.prevClose : undefined}
             />
@@ -139,19 +150,19 @@ export function StockPage({ symbol }: { symbol: string }) {
           {/^\d{4,6}[A-Z]?\.(TW|TWO)$/.test(sym) && (
             <ChipsCard code={sym.split('.')[0]} priceChg20={daily && daily.bars.length > 21 ? daily.bars[daily.bars.length - 1].close / daily.bars[daily.bars.length - 21].close - 1 : undefined} />
           )}
-          <NewsList symbol={sym} name={quote.name} />
+          <NewsList symbol={sym} name={dailyOnly ? '台指期' : quote.name} />
 
           <div className="card">
             <div className="card-title">今日與一年數據</div>
             <div className="stats">
-              <Stat label="昨收" value={fmtPrice(quote.prevClose, mk)} />
-              <Stat label="開盤" value={fmtPrice(today[0]?.open, mk)} />
-              <Stat label="最高" value={fmtPrice(dayHigh, mk)} />
-              <Stat label="最低" value={fmtPrice(dayLow, mk)} />
-              <Stat label="成交量" value={fmtVol(dayVol, mk)} help="volume" />
-              <Stat label="20日均量" value={stats ? fmtVol(stats.avgVol20, mk) : '—'} help="volume" />
-              <Stat label="52週高" value={fmtPrice(quote.high52 ?? daily?.high52, mk)} help="w52" />
-              <Stat label="52週低" value={fmtPrice(quote.low52 ?? daily?.low52, mk)} help="w52" />
+              <Stat label="昨收" value={P(quote.prevClose)} />
+              <Stat label="開盤" value={P(today[0]?.open)} />
+              <Stat label="最高" value={P(dayHigh)} />
+              <Stat label="最低" value={P(dayLow)} />
+              <Stat label="成交量" value={fmtVol(dayVol, mk, vu)} help="volume" />
+              <Stat label="20日均量" value={stats ? fmtVol(stats.avgVol20, mk, vu) : '—'} help="volume" />
+              <Stat label="52週高" value={P(quote.high52 ?? daily?.high52)} help="w52" />
+              <Stat label="52週低" value={P(quote.low52 ?? daily?.low52)} help="w52" />
               <Stat label="一年報酬" value={fmtPct(stats?.periodReturn)} className={cls(stats?.periodReturn)} help="return" />
               <Stat label="年化波動" value={fmtPct(stats?.annVol, false, 1)} help="vol" />
               <Stat label="最大回撤" value={fmtPct(stats?.mdd)} className="down" help="mdd" />
@@ -175,14 +186,18 @@ export function StockPage({ symbol }: { symbol: string }) {
           {quote.tradable ? (
             <div id="trade-panel"><TradePanel symbol={sym} name={quote.name} market={mk} price={quote.price} isOpen={quote.isOpen} demo={quote.demo} /></div>
           ) : (
-            <div className="card muted">指數無法直接交易。想買整個市場可以搜尋 0050（台灣 50）或 SPY / VOO（S&P 500 ETF）。</div>
+            <div className="card kind-note">
+              <div className="card-title">{note?.title}</div>
+              <ul>{note?.lines.map((l, i) => <li key={i}>{l}</li>)}</ul>
+              <button className="btn sm ghost" onClick={() => go('global')}>🌐 全球市場總覽</button>
+            </div>
           )}
           {pos && (
             <div className="card">
               <div className="card-title">我的持股 <Help id="avgcost" /></div>
               <div className="kv">
                 <span>股數</span><b>{fmtNum(pos.qty)} 股{mk === 'TW' && pos.qty >= 1000 ? `（${fmtNum(pos.qty / 1000, pos.qty % 1000 ? 3 : 0)} 張）` : ''}</b>
-                <span>平均成本</span><b>{fmtPrice(pos.avgCost, mk)}</b>
+                <span>平均成本</span><b>{P(pos.avgCost)}</b>
                 <span>市值</span><b>{fmtMoney(pos.qty * quote.price, cur)}</b>
                 <span>未實現損益</span>
                 <b className={cls(quote.price - pos.avgCost)}>
@@ -198,7 +213,7 @@ export function StockPage({ symbol }: { symbol: string }) {
                 {trades.slice(0, 10).map((t) => (
                   <div key={t.id} className="mini-row">
                     <span className={t.side === 'buy' ? 'tag buy' : 'tag sell'}>{t.side === 'buy' ? '買' : '賣'}</span>
-                    <span>{fmtNum(t.qty)} 股 @ {fmtPrice(t.price, mk)}</span>
+                    <span>{fmtNum(t.qty)} 股 @ {P(t.price)}</span>
                     <span className="muted small">{fmtTime(t.time)}</span>
                   </div>
                 ))}

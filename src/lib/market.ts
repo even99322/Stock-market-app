@@ -1,6 +1,7 @@
 import { getJSON, HttpError, NetworkError } from './http';
 import { demoChart } from './demo';
-import { isIndex, lookupName, marketOf } from './names';
+import { digitsOf, isIndex, kindOf, lookupName, marketOf } from './names';
+import { fetchTxChart, isTaifex } from './taifex';
 import type { Bar, ChartData } from './types';
 
 /** 圖表區間 → Yahoo range/interval */
@@ -47,7 +48,11 @@ async function fetchYahoo(symbol: string, range: string): Promise<ChartData> {
     const mktDay = Math.floor(((meta.regularMarketTime || last.time) + (meta.gmtoffset || 0)) / 86400);
     prevClose = lastDay === mktDay ? bars[bars.length - 2].close : last.close;
   }
+  const kind = kindOf(symbol, meta.instrumentType);
   return {
+    kind,
+    digits: digitsOf(kind, price ?? 0, meta.priceHint),
+    volUnit: kind === 'future' ? '口' : kind === 'fx' || kind === 'rate' ? 'none' : undefined,
     symbol: meta.symbol || symbol,
     name: lookupName(symbol) || meta.longName || meta.shortName || symbol,
     market,
@@ -55,7 +60,8 @@ async function fetchYahoo(symbol: string, range: string): Promise<ChartData> {
     bars,
     price,
     prevClose: prevClose ?? price,
-    gmtoffset: meta.gmtoffset ?? (market === 'TW' ? 28800 : -18000),
+    // 匯率、加密貨幣 24 小時交易，Yahoo 以 GMT 回傳；改用台灣時間顯示比較直覺
+    gmtoffset: kind === 'fx' || kind === 'crypto' ? 28800 : meta.gmtoffset ?? (market === 'TW' ? 28800 : -18000),
     isOpen: !!per && now >= per.start && now < per.end,
     intraday,
     demo: false,
@@ -63,7 +69,7 @@ async function fetchYahoo(symbol: string, range: string): Promise<ChartData> {
     fetchedAt: Date.now(),
     high52: meta.fiftyTwoWeekHigh,
     low52: meta.fiftyTwoWeekLow,
-    exchangeName: meta.fullExchangeName || meta.exchangeName,
+    exchangeName: kind === 'fx' ? '外匯市場（24 小時）' : kind === 'crypto' ? '加密貨幣（24 小時）' : meta.fullExchangeName || meta.exchangeName,
   };
 }
 
@@ -79,7 +85,7 @@ export async function fetchChart(symbol: string, range = '6mo', force = false): 
   let data: ChartData;
   try {
     try {
-      data = await fetchYahoo(symbol, range);
+      data = isTaifex(symbol) ? await fetchTxChart(symbol, range) : await fetchYahoo(symbol, range);
     } catch (e) {
       // 上市找不到就試上櫃
       if (e instanceof HttpError && /^\d{4,6}[A-Z]?\.TW$/.test(symbol)) {
@@ -93,6 +99,9 @@ export async function fetchChart(symbol: string, range = '6mo', force = false): 
       dataStatus.lastError = e.message;
       const mk = marketOf(symbol);
       data = demoChart(symbol, lookupName(symbol) || symbol, mk, range);
+      const kind = kindOf(symbol);
+      data = { ...data, kind, digits: digitsOf(kind, data.price), volUnit: kind === 'future' ? '口' : kind === 'fx' || kind === 'rate' ? 'none' : undefined, tradable: !isIndex(symbol) };
+      if (isTaifex(symbol) && data.intraday) data = { ...data, intraday: false, bars: demoChart(symbol, data.name, mk, '1mo').bars.slice(-1) };
     } else throw e;
   }
   cache.set(key, data);
@@ -112,6 +121,7 @@ export interface Quote {
   market: ChartData['market'];
   currency: ChartData['currency'];
   tradable: boolean;
+  digits?: number;
 }
 
 export async function fetchQuote(symbol: string, force = false): Promise<Quote> {
@@ -120,7 +130,7 @@ export async function fetchQuote(symbol: string, force = false): Promise<Quote> 
   return {
     symbol: c.symbol, name: c.name, price: c.price, prevClose: c.prevClose,
     change, changePct: c.prevClose ? (change / c.prevClose) * 100 : 0,
-    isOpen: c.isOpen, demo: c.demo, market: c.market, currency: c.currency, tradable: c.tradable,
+    isOpen: c.isOpen, demo: c.demo, market: c.market, currency: c.currency, tradable: c.tradable, digits: c.digits,
   };
 }
 

@@ -1,5 +1,5 @@
 import { getJSON } from './http';
-import type { Market } from './types';
+import type { InstKind, Market } from './types';
 
 export interface SymbolInfo {
   symbol: string;
@@ -42,6 +42,16 @@ const BUILTIN_RAW: [string, string, Market, SymbolInfo['kind']?][] = [
   ['ES=F', 'S&P 500 期貨', 'US', 'index'], ['NQ=F', '那斯達克100 期貨', 'US', 'index'], ['YM=F', '道瓊期貨', 'US', 'index'],
   ['GC=F', '黃金期貨', 'US', 'index'], ['CL=F', '原油期貨', 'US', 'index'],
   ['^N225', '日經225 指數', 'US', 'index'], ['^HSI', '恆生指數', 'US', 'index'],
+  ['^KS11', '韓國 KOSPI 指數', 'US', 'index'], ['000001.SS', '上證綜合指數', 'US', 'index'],
+  ['^GDAXI', '德國 DAX 指數', 'US', 'index'], ['^FTSE', '英國富時100 指數', 'US', 'index'], ['^RUT', '羅素2000 指數', 'US', 'index'],
+  ['TX.TAIFEX', '台指期（近月・日盤）', 'TW', 'index'], ['TXN.TAIFEX', '台指期（近月・夜盤）', 'TW', 'index'],
+  ['JPYTWD=X', '日圓/台幣', 'US', 'index'], ['EURTWD=X', '歐元/台幣', 'US', 'index'], ['HKDTWD=X', '港幣/台幣', 'US', 'index'],
+  ['CNY=X', '美元/人民幣', 'US', 'index'], ['EURUSD=X', '歐元/美元', 'US', 'index'], ['KRW=X', '美元/韓元', 'US', 'index'],
+  ['^IRX', '美國3個月期國庫券殖利率', 'US', 'index'], ['^FVX', '美國5年期公債殖利率', 'US', 'index'], ['^TYX', '美國30年期公債殖利率', 'US', 'index'],
+  ['RTY=F', '羅素2000 期貨', 'US', 'index'], ['NKD=F', '日經225 期貨', 'US', 'index'],
+  ['SI=F', '白銀期貨', 'US', 'index'], ['HG=F', '銅期貨', 'US', 'index'], ['BZ=F', '布蘭特原油期貨', 'US', 'index'],
+  ['NG=F', '天然氣期貨', 'US', 'index'], ['ZC=F', '玉米期貨', 'US', 'index'], ['ZS=F', '黃豆期貨', 'US', 'index'],
+  ['BTC-USD', '比特幣', 'US', 'index'], ['ETH-USD', '以太幣', 'US', 'index'],
   ['SOXX', 'iShares 半導體 ETF', 'US', 'etf'], ['EWT', 'iShares MSCI 台灣 ETF', 'US', 'etf'],
   ['UMC', '聯電 ADR', 'US'], ['ASX', '日月光 ADR', 'US'], ['CHT', '中華電 ADR', 'US'],
   ['SPY', 'SPDR 標普500 ETF', 'US', 'etf'], ['VOO', 'Vanguard 標普500 ETF', 'US', 'etf'],
@@ -155,13 +165,32 @@ export function lookupName(symbol: string): string | undefined {
 }
 
 export function marketOf(symbol: string): Market {
-  if (/\.(TW|TWO)$/i.test(symbol) || symbol === '^TWII' || symbol === '^TWOII') return 'TW';
+  if (/\.(TW|TWO|TAIFEX)$/i.test(symbol) || symbol === '^TWII' || symbol === '^TWOII') return 'TW';
   return 'US';
 }
 
 /** 指數、匯率、期貨等不能在模擬帳戶交易、也沒有財報的標的 */
 export function isIndex(symbol: string) {
-  return symbol.startsWith('^') || symbol.includes('=') || symbol.endsWith('.NYB');
+  return symbol.startsWith('^') || symbol.includes('=') || /\.(NYB|TAIFEX|SS)$/.test(symbol) || /-USD$/.test(symbol);
+}
+
+const RATES = new Set(['^TNX', '^IRX', '^FVX', '^TYX']);
+/** 依代號判斷種類（Yahoo 的 instrumentType 可用時優先） */
+export function kindOf(symbol: string, instrumentType?: string): InstKind {
+  if (RATES.has(symbol)) return 'rate';
+  if (/\.TAIFEX$/.test(symbol) || /=F$/.test(symbol) || instrumentType === 'FUTURE') return 'future';
+  if (/=X$/.test(symbol) || instrumentType === 'CURRENCY') return 'fx';
+  if (/-USD$/.test(symbol) || instrumentType === 'CRYPTOCURRENCY') return 'crypto';
+  if (symbol.startsWith('^') || /\.(NYB|SS)$/.test(symbol) || instrumentType === 'INDEX') return 'index';
+  return 'stock';
+}
+
+/** 價格小數位數：匯率依數值大小，其餘採 Yahoo 的 priceHint（上限 4） */
+export function digitsOf(kind: InstKind, price: number, priceHint?: number): number | undefined {
+  if (kind === 'fx') return price >= 100 ? 2 : price >= 10 ? 3 : 4;
+  if (kind === 'rate') return 3;
+  if (kind === 'future' || kind === 'crypto') return price >= 1000 ? Math.min(priceHint ?? 2, 2) : Math.min(Math.max(priceHint ?? 2, 2), 3);
+  return undefined;
 }
 
 /** 使用者輸入轉成 Yahoo 代號：2330 → 2330.TW、aapl → AAPL */
@@ -172,7 +201,7 @@ export function normalizeSymbol(input: string): string {
     const hit = [...BUILTIN, ...twList].find((x) => x.symbol.split('.')[0] === s);
     return hit ? hit.symbol : `${s}.TW`;
   }
-  if (/\.(TW|TWO)$/.test(s) || s.startsWith('^') || s.includes('=') || s.endsWith('.NYB')) return s;
+  if (/\.(TW|TWO|TAIFEX|SS)$/.test(s) || s.startsWith('^') || s.includes('=') || s.endsWith('.NYB') || /-USD$/.test(s)) return s;
   return s.replace(/\s+/g, '').replace(/\./g, '-'); // BRK.B → BRK-B
 }
 

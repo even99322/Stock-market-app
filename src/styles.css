@@ -406,3 +406,22 @@ code { background: var(--bg); padding: 1px 5px; border-radius: 4px; }
 .tr.lesson-row .name { white-space: normal; overflow: visible; flex: 1; min-width: 0; line-height: 1.45; }
 .tr.lesson-row .name b { white-space: normal; }
 .tr.lesson-row .num { flex-shrink: 0; }
+
+/* ---- 全球市場 ---- */
+.g-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.g-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.g-tile { text-align: left; border: 1px solid var(--line); background: var(--panel2); border-radius: 10px; padding: 9px 10px; cursor: pointer; display: flex; flex-direction: column; gap: 3px; min-width: 0; color: var(--text); }
+.g-tile:hover { border-color: var(--accent); }
+.g-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 13px; }
+.g-top b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.g-price { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.g-trend { width: 100%; height: 44px; display: block; }
+.g-trend.empty { display: flex; align-items: center; justify-content: center; border: 1px dashed var(--line); border-radius: 6px; }
+.g-why { font-size: 11px; color: var(--muted); line-height: 1.4; }
+.g-tiles.compact .g-why { display: none; }
+.card-title .push { margin-left: auto; }
+.kind-note ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 1.6; color: var(--muted); }
+@media (max-width: 760px) {
+  .g-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .g-price { font-size: 16px; }
+}

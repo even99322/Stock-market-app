@@ -16,6 +16,10 @@ interface Props {
   intraday: boolean;
   gmtoffset: number;
   market: Market;
+  /** 價格小數位數（匯率、期貨）；未指定時依市場決定 */
+  digits?: number;
+  /** 成交量單位：期貨為口；none 表示沒有成交量 */
+  volUnit?: '口' | 'none';
   overlays: Overlays;
   sub: SubKind;
   redUp: boolean;
@@ -94,7 +98,7 @@ export function PriceChart(p: Props) {
 
     const candle = main.addCandlestickSeries({
       upColor: up, downColor: down, borderUpColor: up, borderDownColor: down, wickUpColor: up, wickDownColor: down,
-      priceFormat: { type: 'price', precision: p.market === 'US' ? 2 : 2, minMove: 0.01 },
+      priceFormat: { type: 'price', precision: p.digits ?? 2, minMove: 1 / 10 ** (p.digits ?? 2) },
     });
     candle.setData(p.bars.map((b, i) => ({ time: T[i], open: b.open, high: b.high, low: b.low, close: b.close })));
 
@@ -102,12 +106,16 @@ export function PriceChart(p: Props) {
       candle.createPriceLine({ price: p.baseline, color: '#9aa5bb', lineWidth: 1, lineStyle: LineStyle.Dotted, axisLabelVisible: true, title: '昨收' });
     }
 
-    const vol = main.addHistogramSeries({ priceScaleId: 'vol', priceFormat: { type: 'volume' }, lastValueVisible: false, priceLineVisible: false });
-    main.priceScale('vol').applyOptions({ scaleMargins: { top: 0.8, bottom: 0 }, visible: false });
-    vol.setData(p.bars.map((b, i) => ({ time: T[i], value: b.volume, color: (b.close >= b.open ? up : down) + '66' })));
-    const vma = main.addLineSeries({ priceScaleId: 'vol', color: '#f5c54288', lineWidth: 1, lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
-    vma.setData(line(ind.vma));
-    main.priceScale('right').applyOptions({ scaleMargins: { top: 0.08, bottom: 0.22 } });
+    // 匯率、利率、多數指數沒有成交量：不畫成交量區，把空間留給價格
+    const hasVol = p.volUnit !== 'none' && p.bars.some((x) => x.volume > 0);
+    if (hasVol) {
+      const vol = main.addHistogramSeries({ priceScaleId: 'vol', priceFormat: { type: 'volume' }, lastValueVisible: false, priceLineVisible: false });
+      main.priceScale('vol').applyOptions({ scaleMargins: { top: 0.8, bottom: 0 }, visible: false });
+      vol.setData(p.bars.map((b, i) => ({ time: T[i], value: b.volume, color: (b.close >= b.open ? up : down) + '66' })));
+      const vma = main.addLineSeries({ priceScaleId: 'vol', color: '#f5c54288', lineWidth: 1, lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
+      vma.setData(line(ind.vma));
+    }
+    main.priceScale('right').applyOptions({ scaleMargins: { top: 0.08, bottom: hasVol ? 0.22 : 0.06 } });
 
     const thin = { lineWidth: 1 as const, lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false };
     if (p.overlays.ma) {
@@ -221,12 +229,12 @@ export function PriceChart(p: Props) {
       el.removeEventListener('touchmove', onTouch);
       charts.forEach((c) => c.remove());
     };
-  }, [p.bars, p.overlays.ma, p.overlays.boll, p.sub, p.redUp, p.trades, toTime, ind, p.visibleBars, p.hideDates, p.market, p.intraday, p.baseline, touchInspect, p.notes, p.lines, p.extra]);
+  }, [p.bars, p.overlays.ma, p.overlays.boll, p.sub, p.redUp, p.trades, toTime, ind, p.visibleBars, p.hideDates, p.market, p.digits, p.volUnit, p.intraday, p.baseline, touchInspect, p.notes, p.lines, p.extra]);
 
   const li = legend?.i ?? p.bars.length - 1;
   const lb = legend?.bar ?? p.bars[p.bars.length - 1];
   const prev = p.bars[li - 1];
-  const v = (s: Series) => (s[li] == null ? '—' : fmtPrice(s[li]!, p.market));
+  const v = (s: Series) => (s[li] == null ? '—' : fmtPrice(s[li]!, p.market, p.digits));
   const subLegend = () => {
     const f = (x: number | null | undefined, d = 1) => (x == null ? '—' : x.toFixed(d));
     switch (p.sub) {
@@ -250,11 +258,11 @@ export function PriceChart(p: Props) {
     <div className="chart-wrap">
       <div className="legend">
         {!p.hideDates && <span>{p.intraday ? new Date((lb.time + p.gmtoffset) * 1000).toISOString().slice(5, 16).replace('T', ' ') : dateStr(lb.time, p.gmtoffset)}</span>}
-        <span>開 {fmtPrice(lb.open, p.market)}</span>
-        <span>高 {fmtPrice(lb.high, p.market)}</span>
-        <span>低 {fmtPrice(lb.low, p.market)}</span>
-        <span>收 <b className={chg >= 0 ? 'up' : 'down'}>{fmtPrice(lb.close, p.market)} ({(chg * 100).toFixed(2)}%)</b></span>
-        <span>量 {fmtVol(lb.volume, p.market)}</span>
+        <span>開 {fmtPrice(lb.open, p.market, p.digits)}</span>
+        <span>高 {fmtPrice(lb.high, p.market, p.digits)}</span>
+        <span>低 {fmtPrice(lb.low, p.market, p.digits)}</span>
+        <span>收 <b className={chg >= 0 ? 'up' : 'down'}>{fmtPrice(lb.close, p.market, p.digits)} ({(chg * 100).toFixed(2)}%)</b></span>
+        <span>量 {fmtVol(lb.volume, p.market, p.volUnit)}</span>
         {p.overlays.ma && (
           <span>
             <i style={{ color: MA_COLORS[5] }}>MA5 {v(ind.ma5)}</i> <i style={{ color: MA_COLORS[20] }}>MA20 {v(ind.ma20)}</i>{' '}
@@ -273,14 +281,14 @@ export function PriceChart(p: Props) {
           <div className="chart-tip" style={{ left: tipLeft, transform: 'translateX(-50%)' }}>
             {!p.hideDates && <div className="tip-date">{fmtChartTime(toTime(lb.time))}</div>}
             <div className="tip-row">
-              <span>價格 <b className={cls(tipChg)}>{fmtPrice(lb.close, p.market)} ({tipChg > 0 ? '+' : ''}{(tipPct * 100).toFixed(2)}%)</b></span>
-              <span>成交量 <b>{fmtVol(lb.volume, p.market)}</b></span>
+              <span>價格 <b className={cls(tipChg)}>{fmtPrice(lb.close, p.market, p.digits)} ({tipChg > 0 ? '+' : ''}{(tipPct * 100).toFixed(2)}%)</b></span>
+              <span>成交量 <b>{fmtVol(lb.volume, p.market, p.volUnit)}</b></span>
             </div>
             <div className="tip-row">
-              <span>開 <b>{fmtPrice(lb.open, p.market)}</b></span>
-              <span>高 <b>{fmtPrice(lb.high, p.market)}</b></span>
-              <span>低 <b>{fmtPrice(lb.low, p.market)}</b></span>
-              <span>漲跌 <b className={cls(tipChg)}>{tipChg > 0 ? '+' : ''}{fmtPrice(tipChg, p.market)}</b></span>
+              <span>開 <b>{fmtPrice(lb.open, p.market, p.digits)}</b></span>
+              <span>高 <b>{fmtPrice(lb.high, p.market, p.digits)}</b></span>
+              <span>低 <b>{fmtPrice(lb.low, p.market, p.digits)}</b></span>
+              <span>漲跌 <b className={cls(tipChg)}>{tipChg > 0 ? '+' : ''}{fmtPrice(tipChg, p.market, p.digits)}</b></span>
             </div>
           </div>
         )}

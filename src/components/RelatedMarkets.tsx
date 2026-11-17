@@ -39,17 +39,17 @@ export function RelatedMarkets({ symbol, industry, refreshSec }: { symbol: strin
 
   return (
     <div className="card">
-      <div className="card-title">相關市場 <span className="muted small">大盤・匯率・期貨・ETF 同步報價</span><Help id="related" /></div>
+      <div className="card-title">相關市場 <span className="muted small">大盤・匯率・期貨・ETF 同步報價</span><Help id="related" /><button className="btn sm ghost push" onClick={() => go('global')}>全球市場 →</button></div>
       {groups.map((g) => (
         <div key={g.title} className="rel-group">
           <div className="sub-title">{g.title}</div>
           <div className="rel-tiles">
             {g.taifex && tx.map((q) => (
-              <div key={q.session} className="rel-tile static" title="期交所每日行情（收盤後更新），沒有即時走勢圖">
+              <button key={q.session} className="rel-tile" onClick={() => go('stock', q.session === '日盤' ? 'TX.TAIFEX' : 'TXN.TAIFEX')} title="期交所每日行情（收盤後更新）。點一下看日 K 走勢">
                 <div className="rel-top"><b>台指期 {q.session}</b><span className={`num ${cls(q.change)}`}>{fmtPct(q.pct / 100)}</span></div>
                 <div className="rel-mid"><span className={`rel-price ${cls(q.change)}`}>{fmtNum(q.last)}</span><span className="muted small">{q.date} · {q.month.slice(4)}月</span></div>
                 <div className="rel-why">{q.session === '日盤' ? '台股大盤的期貨，常領先現貨反應' : '15:00 後的盤後交易，反映夜間國際股市'}</div>
-              </div>
+              </button>
             ))}
             {g.items.map((i) => {
               const c = data[i.s];
@@ -59,7 +59,7 @@ export function RelatedMarkets({ symbol, industry, refreshSec }: { symbol: strin
                 <button key={i.s} className="rel-tile" onClick={() => go('stock', i.s)}>
                   <div className="rel-top"><b>{i.name}</b>{ok && <span className={`num ${cls(chg)}`}>{fmtPct(c.prevClose ? chg / c.prevClose : 0)}</span>}</div>
                   <div className="rel-mid">
-                    <span className={`rel-price ${ok ? cls(chg) : ''}`}>{ok ? fmtPrice(c.price, c.market) : c === 'err' ? '—' : '…'}</span>
+                    <span className={`rel-price ${ok ? cls(chg) : ''}`}>{ok ? fmtPrice(c.price, c.market, c.digits) : c === 'err' ? '—' : '…'}</span>
                     {ok && <Spark c={c} up={chg >= 0} />}
                   </div>
                   <div className="rel-why">{i.why}{ok && c.demo ? '（示範資料）' : ''}</div>
