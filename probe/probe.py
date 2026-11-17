@@ -12,9 +12,14 @@ def get(url):
         except Exception as e:
             err = str(e); time.sleep(3)
     return ("ERR " + err).encode()
-SY = ["TWD=X","JPY=X","EURUSD=X","CNY=X","JPYTWD=X","EURTWD=X","CNYTWD=X","HKDTWD=X","KRW=X","DX-Y.NYB","^TNX","^IRX","^TYX","^FVX",
-      "ES=F","NQ=F","YM=F","RTY=F","NKD=F","GC=F","SI=F","HG=F","CL=F","BZ=F","NG=F","ZN=F","ZC=F","ZS=F","BTC-USD","ETH-USD",
-      "^TWII","^TWOII","^N225","^HSI","^KS11","000001.SS","^GDAXI","^FTSE","^DJI","^RUT","^VIX","^SOX","WTX=F","TX=F","FITX=F","WTX&.TW","IX0126.TW"]
+SY = """^N225 ^TPX ^TOPX 1306.T ^KS11 ^KQ11 ^HSI ^HSCE ^HSTECH 000001.SS 399001.SZ 000300.SS 399006.SZ ^NSEI ^BSESN ^AXJO ^STI ^JKSE ^SET.BK ^KLSE ^VNINDEX.VN VNM PSEI.PS ^NZ50
+^STOXX50E ^STOXX ^GDAXI ^FCHI ^FTSE ^SSMI FTSEMIB.MI ^IBEX ^AEX ^OMX ^OMXS30 ^BFX ^ATX
+^GSPTSE ^BVSP ^MXX ^MERV ^IPSA ^TASI.SR ^TA125.TA ^J203.JO ^JN0U.JO ^CASE30 XU100.IS
+GBPTWD=X AUDTWD=X CADTWD=X SGDTWD=X CNYTWD=X KRWTWD=X THBTWD=X CHFTWD=X NZDTWD=X TWDJPY=X TWDKRW=X TWDCNY=X TWDTHB=X TWDVND=X
+GBPUSD=X AUDUSD=X NZDUSD=X CAD=X CHF=X HKD=X SGD=X INR=X THB=X VND=X IDR=X MYR=X PHP=X CNH=X MXN=X BRL=X ZAR=X TRY=X EURJPY=X GBPJPY=X AUDJPY=X EURGBP=X
+7203.T 6758.T 8035.T 9984.T 9983.T 6861.T 7974.T 005930.KS 000660.KS 373220.KS 0700.HK 9988.HK 1810.HK 3690.HK 0005.HK 1299.HK 600519.SS 300750.SZ 002594.SZ 601318.SS
+ASML.AS SAP.DE SIE.DE MC.PA OR.PA NESN.SW NOVN.SW ROG.SW NOVO-B.CO SHEL.L AZN.L HSBA.L RELIANCE.NS TCS.NS BHP.AX CBA.AX D05.SI SHOP.TO RY.TO
+^TWOII ^TWO 006201.TWO""".split()
 out = {}
 for s in SY:
     o = {}
@@ -31,16 +36,4 @@ for s in SY:
         time.sleep(0.4)
     out[s] = o
 json.dump(out, open("samples/yglobal.json","w"), ensure_ascii=False, separators=(",",":"))
-fm = {}
-for ds, did, a in [("TaiwanFuturesDaily","TX","2026-10-01"),("TaiwanFuturesDaily","MTX","2026-11-01"),("TaiwanFuturesDaily","TE","2026-11-01"),("TaiwanFutOptDailyInfo","","2026-11-01"),
-                   ("TaiwanExchangeRate","USD","2026-10-01"),("TaiwanFuturesInstitutionalInvestors","TX","2026-10-15")]:
-    u = "https://api.finmindtrade.com/api/v4/data?dataset=%s&start_date=%s" % (ds, a) + ("&data_id="+did if did else "")
-    try:
-        d = json.loads(get(u)); rows = d.get("data", [])
-        fm[ds+":"+did] = {"msg": d.get("msg"), "status": d.get("status"), "n": len(rows), "head": rows[:6], "tail": rows[-40:]}
-    except Exception as e:
-        fm[ds+":"+did] = {"msg": str(e)}
-    time.sleep(1.2)
-json.dump(fm, open("samples/fmfut.json","w"), ensure_ascii=False, separators=(",",":"))
 print({k: {r: (v[r].get("n"), v[r].get("err")) for r in v} for k, v in out.items()})
-print({k: (v.get("msg"), v.get("n")) for k, v in fm.items()})
