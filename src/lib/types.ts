@@ -21,6 +21,8 @@ export interface ChartData {
   digits?: number;
   /** 成交量單位：期貨為「口」；匯率、利率沒有成交量 */
   volUnit?: '口' | 'none';
+  /** 報價幣別（Yahoo 原始代碼，例如 JPY、HKD、GBp）；海外標的顯示用 */
+  ccy?: string;
   symbol: string;
   name: string;
   market: Market;

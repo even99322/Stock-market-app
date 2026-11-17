@@ -425,3 +425,6 @@ code { background: var(--bg); padding: 1px 5px; border-radius: 4px; }
   .g-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .g-price { font-size: 16px; }
 }
+.g-cats { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
+.g-cats button { flex-shrink: 0; border: 1px solid var(--line); background: var(--panel2); color: var(--muted); border-radius: 99px; padding: 7px 14px; cursor: pointer; font-size: 14px; }
+.g-cats button.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }

@@ -1,6 +1,6 @@
 import { getJSON, HttpError, NetworkError } from './http';
 import { demoChart } from './demo';
-import { digitsOf, isIndex, kindOf, lookupName, marketOf } from './names';
+import { digitsOf, isForeign, isIndex, kindOf, lookupName, marketOf } from './names';
 import { fetchTxChart, isTaifex } from './taifex';
 import type { Bar, ChartData } from './types';
 
@@ -51,7 +51,8 @@ async function fetchYahoo(symbol: string, range: string): Promise<ChartData> {
   const kind = kindOf(symbol, meta.instrumentType);
   return {
     kind,
-    digits: digitsOf(kind, price ?? 0, meta.priceHint),
+    digits: digitsOf(kind, price ?? 0, kind === 'stock' && isForeign(symbol) ? -1 : meta.priceHint),
+    ccy: meta.currency || undefined,
     volUnit: kind === 'future' ? '口' : kind === 'fx' || kind === 'rate' ? 'none' : undefined,
     symbol: meta.symbol || symbol,
     name: lookupName(symbol) || meta.longName || meta.shortName || symbol,
@@ -100,7 +101,7 @@ export async function fetchChart(symbol: string, range = '6mo', force = false): 
       const mk = marketOf(symbol);
       data = demoChart(symbol, lookupName(symbol) || symbol, mk, range);
       const kind = kindOf(symbol);
-      data = { ...data, kind, digits: digitsOf(kind, data.price), volUnit: kind === 'future' ? '口' : kind === 'fx' || kind === 'rate' ? 'none' : undefined, tradable: !isIndex(symbol) };
+      data = { ...data, kind, digits: digitsOf(kind, data.price, kind === 'stock' && isForeign(symbol) ? -1 : undefined), volUnit: kind === 'future' ? '口' : kind === 'fx' || kind === 'rate' ? 'none' : undefined, tradable: !isIndex(symbol) };
       if (isTaifex(symbol) && data.intraday) data = { ...data, intraday: false, bars: demoChart(symbol, data.name, mk, '1mo').bars.slice(-1) };
     } else throw e;
   }

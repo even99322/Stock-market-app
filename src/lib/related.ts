@@ -1,5 +1,5 @@
 // 個股的「相關市場」：大盤、匯率、期貨、ETF（依市場與題材決定）
-import { isIndex } from './names';
+import { exchangeOf, isIndex, lookupName } from './names';
 import { themesOf, usSectorOf } from './themes';
 
 export interface RelItem { s: string; name: string; why: string }
@@ -27,6 +27,14 @@ export function relatedMarkets(symbol: string, industry?: string): RelGroup[] {
   const oil = themes.includes('shipping') || /塑膠|航運|油電|化學/.test(industry || '');
   const sec = usSectorOf(symbol);
   const groups: RelGroup[] = [];
+  const ex = exchangeOf(symbol);
+  if (ex) {
+    // 海外股票：當地大盤、對台幣的匯率，再加上美股與美元
+    return [
+      { title: '大盤指數', items: [it(ex.index, lookupName(ex.index) || ex.index, `${ex.region}的大盤`), it('^GSPC', 'S&P 500', '全球股市多半跟著美股方向')].filter((x) => x.s !== symbol) },
+      { title: '匯率・利率', items: [it(ex.fx, lookupName(ex.fx) || ex.fx, '換算成台幣報酬時要一起看匯率'), it('DX-Y.NYB', '美元指數', '美元強弱影響全球資金流向')] },
+    ];
+  }
   const uniq = (a: RelItem[]) => a.filter((x, i) => x.s !== symbol && a.findIndex((y) => y.s === x.s) === i);
 
   if (tw) {

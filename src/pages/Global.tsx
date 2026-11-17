@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { go, Seg } from '../components/ui';
 import { cls, fmtPct, fmtPrice } from '../lib/format';
-import { GLOBAL_GROUPS, GLOBAL_PICKS, globalItem, type GItem } from '../lib/global';
+import { GLOBAL_CATS, GLOBAL_GROUPS, GLOBAL_PICKS, globalItem, type GItem } from '../lib/global';
 import { dataStatus, fetchChart } from '../lib/market';
 import { useApp } from '../lib/store';
 import type { ChartData } from '../lib/types';
@@ -69,9 +69,10 @@ function useCharts(syms: string[], range: string, refreshSec: number) {
 export function GlobalPage() {
   const app = useApp();
   const [range, setRange] = useState(() => localStorage.getItem('stocksim.grange') || '1mo');
-  const [tab, setTab] = useState('all');
+  const [tab, setTabRaw] = useState(() => localStorage.getItem('stocksim.gcat') || 'idx');
+  const setTab = (t: string) => { setTabRaw(t); localStorage.setItem('stocksim.gcat', t); window.scrollTo(0, 0); };
   useEffect(() => { localStorage.setItem('stocksim.grange', range); }, [range]);
-  const groups = useMemo(() => GLOBAL_GROUPS.filter((g) => tab === 'all' || g.id === tab), [tab]);
+  const groups = useMemo(() => GLOBAL_GROUPS.filter((g) => g.cat === tab), [tab]);
   const get = useCharts(groups.flatMap((g) => g.items.map((i) => i.s)), range, app.settings.refreshSec);
 
   return (
@@ -83,14 +84,14 @@ export function GlobalPage() {
         </div>
         {dataStatus.offline ? <span className="badge warn">離線：示範資料</span> : <span className="badge">延遲報價</span>}
       </div>
+      <div className="g-cats">
+        {GLOBAL_CATS.map((c) => <button key={c.v} className={tab === c.v ? 'on' : ''} onClick={() => setTab(c.v)}>{c.label}</button>)}
+      </div>
       <div className="g-tools">
         <Seg small value={range} onChange={setRange} options={RANGES} />
-        <select value={tab} onChange={(e) => setTab(e.target.value)}>
-          <option value="all">全部類別</option>
-          {GLOBAL_GROUPS.map((g) => <option key={g.id} value={g.id}>{g.title}</option>)}
-        </select>
+        <span className="muted small">漲跌幅為所選區間的變化（「今日」為相對昨收）。點任一格看完整 K 線。</span>
       </div>
-      <div className="muted small">漲跌幅為所選區間的變化（「今日」為相對昨收）。點任一格可看完整 K 線、均線與技術指標。</div>
+      {tab === 'stock' && <div className="note">這裡列出各地區的代表公司。其他海外股票可以在「市場」頁搜尋，輸入英文名稱或代號（例如 7203.T、0700.HK、005930.KS、SAP.DE）。海外股票只能看行情，不能模擬下單。</div>}
       {groups.map((g) => (
         <div key={g.id} className="card">
           <div className="card-title">{g.title}{g.note && <span className="muted small">{g.note}</span>}</div>

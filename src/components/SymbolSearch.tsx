@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { localSearch, normalizeSymbol, remoteSearch, type SymbolInfo } from '../lib/names';
+import { isIndex, localSearch, marketTag, normalizeSymbol, remoteSearch, type SymbolInfo } from '../lib/names';
 
 /** 代號 / 名稱搜尋框：本機清單即時比對，美股再補線上搜尋 */
 export function SymbolSearch({ onPick, placeholder, autoFocus, excludeIndex }: {
@@ -11,13 +11,14 @@ export function SymbolSearch({ onPick, placeholder, autoFocus, excludeIndex }: {
   const timer = useRef<any>();
 
   useEffect(() => {
-    const local = localSearch(q).filter((x) => !excludeIndex || x.kind !== 'index');
+    const tradable = (x: SymbolInfo) => !excludeIndex || (x.kind !== 'index' && !isIndex(x.symbol));
+    const local = localSearch(q).filter(tradable);
     setRes(local);
     clearTimeout(timer.current);
     if (q.trim().length >= 1 && /[A-Za-z]/.test(q)) {
       timer.current = setTimeout(async () => {
         try {
-          const remote = (await remoteSearch(q)).filter((x) => !excludeIndex || x.kind !== 'index');
+          const remote = (await remoteSearch(q)).filter(tradable);
           setRes((cur) => {
             const seen = new Set(cur.map((x) => x.symbol));
             return [...cur, ...remote.filter((x) => !seen.has(x.symbol))].slice(0, 15);
@@ -39,7 +40,7 @@ export function SymbolSearch({ onPick, placeholder, autoFocus, excludeIndex }: {
       <input
         value={q}
         autoFocus={autoFocus}
-        placeholder={placeholder || '搜尋代號或名稱：2330、台積電、AAPL…'}
+        placeholder={placeholder || '搜尋：2330、台積電、AAPL、豐田、7203.T、美元…'}
         onChange={(e) => { setQ(e.target.value); setOpen(true); }}
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 200)}
@@ -50,7 +51,7 @@ export function SymbolSearch({ onPick, placeholder, autoFocus, excludeIndex }: {
           {res.length === 0 && <div className="muted pad">按 Enter 直接查詢「{normalizeSymbol(q)}」</div>}
           {res.map((s) => (
             <button key={s.symbol} onMouseDown={(e) => e.preventDefault()} onClick={() => pick(s)}>
-              <span className={`tag ${s.market}`}>{s.market === 'TW' ? '台' : '美'}</span>
+              <span className={`tag ${s.market}`}>{marketTag(s.symbol)}</span>
               <b>{s.symbol.replace(/\.(TW|TWO)$/, '')}</b>
               <span className="muted">{s.name}</span>
               {s.kind === 'etf' && <span className="tag">ETF</span>}

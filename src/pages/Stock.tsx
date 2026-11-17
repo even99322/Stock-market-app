@@ -104,7 +104,7 @@ export function StockPage({ symbol }: { symbol: string }) {
         <div className="grow">
           <h2>{quote.name} <span className="muted small">{sym}</span></h2>
           <div className="muted small">
-            {quote.exchangeName} · {quote.isOpen ? <span className="up-ish">交易中</span> : '已收盤'}
+            {quote.exchangeName}{quote.ccy && !['TWD', 'USD'].includes(quote.ccy) && quote.kind !== 'fx' ? ` · ${quote.ccy === 'GBp' ? '便士（GBp）' : quote.ccy}計價` : ''} · {quote.isOpen ? <span className="up-ish">交易中</span> : '已收盤'}
             {quote.demo && <span className="badge warn">示範資料</span>}
           </div>
         </div>

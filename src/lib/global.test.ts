@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { fmtPrice, fmtVol } from './format';
 import { GLOBAL_GROUPS, GLOBAL_PICKS, globalItem, kindNote } from './global';
-import { digitsOf, isIndex, kindOf, lookupName, marketOf, normalizeSymbol } from './names';
+import { digitsOf, exchangeOf, isForeign, isIndex, kindOf, lookupName, marketOf, marketTag, normalizeSymbol } from './names';
+import { relatedMarkets } from './related';
 import { parseTxDaily } from './taifex';
 
 const row = (date: string, contract: string, session: string, o: number, h: number, l: number, c: number, v: number) =>
@@ -34,13 +35,45 @@ describe('全球市場', () => {
     const all = GLOBAL_GROUPS.flatMap((g) => g.items);
     expect(new Set(all.map((i) => i.s)).size).toBe(all.length);
     for (const i of all) {
-      expect(isIndex(i.s), i.s).toBe(true);
+      if (i.s !== 'VNM') expect(isIndex(i.s), i.s).toBe(true); // VNM 是美股 ETF，可以交易
       expect(lookupName(i.s) || i.s === '^TWII', i.s).toBeTruthy();
       expect(normalizeSymbol(i.s), i.s).toBe(i.s);
       expect(kindNote(kindOf(i.s), i.s).lines.length, i.s).toBeGreaterThan(1);
     }
     for (const s of GLOBAL_PICKS) expect(globalItem(s), s).toBeTruthy();
     expect(marketOf('TX.TAIFEX')).toBe('TW');
+  });
+
+  it('海外股票：認得交易所、不可交易、保留代號後綴', () => {
+    expect(isForeign('7203.T')).toBe(true);
+    expect(isForeign('2330.TW')).toBe(false);
+    expect(isForeign('AAPL')).toBe(false);
+    expect(isForeign('BRK-B')).toBe(false);
+    expect(exchangeOf('0700.HK')?.region).toBe('香港');
+    expect(normalizeSymbol('7203.t')).toBe('7203.T');
+    expect(normalizeSymbol('brk.b')).toBe('BRK-B');
+    expect(normalizeSymbol('sap.de')).toBe('SAP.DE');
+    expect(kindOf('7203.T', 'EQUITY')).toBe('stock');
+    expect(kindOf('000001.SS')).toBe('index');
+    expect(kindOf('FTSEMIB.MI')).toBe('index');
+    expect(isIndex('005930.KS')).toBe(true);
+    expect(isIndex('AAPL')).toBe(false);
+    expect(digitsOf('stock', 192350, -1)).toBe(0);
+    expect(digitsOf('stock', 86.15, -1)).toBe(2);
+    expect(marketTag('7203.T')).toBe('日');
+    expect(marketTag('2330.TW')).toBe('台');
+    expect(marketTag('AAPL')).toBe('美');
+    expect(marketTag('TWD=X')).toBe('匯');
+    expect(kindNote('stock', '7203.T').title).toBe('這是日本股票');
+    const rel = relatedMarkets('7203.T').flatMap((g) => g.items.map((i) => i.s));
+    expect(rel).toContain('^N225');
+    expect(rel).toContain('JPYTWD=X');
+    // 每個交易所的大盤與匯率都有中文名稱
+    for (const sfx of ['T', 'KS', 'HK', 'SS', 'SZ', 'L', 'DE', 'PA', 'AS', 'SW', 'NS', 'AX', 'SI', 'TO']) {
+      const ex = exchangeOf('X.' + sfx)!;
+      expect(lookupName(ex.index), sfx).toBeTruthy();
+      expect(lookupName(ex.fx), sfx).toBeTruthy();
+    }
   });
 
   it('台指期：每天取成交量最大的月份合約，忽略價差與無成交的合約', () => {

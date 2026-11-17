@@ -8,7 +8,7 @@ import { calcFees } from '../lib/fees';
 import { maxBuyQty, replayTrade, uid } from '../lib/engine';
 import { cls, dateStr, fmtMoney, fmtNum, fmtPct, fmtPrice } from '../lib/format';
 import { fetchChart } from '../lib/market';
-import { BUILTIN, lookupName, type SymbolInfo } from '../lib/names';
+import { BUILTIN, lookupName, type SymbolInfo, isIndex } from '../lib/names';
 import { maxDrawdown } from '../lib/stats';
 import { store, useApp } from '../lib/store';
 import type { ChartData, ReplaySession, Side } from '../lib/types';
@@ -71,7 +71,7 @@ function ReplayHome({ auto }: { auto?: { symbol: string; date: string } }) {
   }, []); // eslint-disable-line
 
   const random = () => {
-    const pool = BUILTIN.filter((x) => x.kind !== 'index');
+    const pool = BUILTIN.filter((x) => x.kind !== 'index' && !isIndex(x.symbol));
     const s = pool[Math.floor(Math.random() * pool.length)];
     create(s, null, true);
   };
