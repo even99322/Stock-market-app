@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { BarChart, LinesChart } from '../components/MiniCharts';
 import { DividendCard } from '../components/DividendCard';
+import { EtfCard } from '../components/EtfCard';
 import { NewsList } from '../components/NewsList';
 import { go, Help, Seg, Spinner, Stat } from '../components/ui';
 import { analyze, computeRatios, fetchFinancials, margins, type Financials, type FinPeriod } from '../lib/financials';
 import { cls, fmtPct, fmtPrice } from '../lib/format';
 import { fetchQuote, type Quote } from '../lib/market';
-import { getFundamental, loadTwData, lookupName } from '../lib/names';
+import { getFundamental, isEtf, loadTwData, lookupName } from '../lib/names';
 import { profileOf } from '../lib/profiles';
 import { themesOf, usSectorOf } from '../lib/themes';
 import { industryOf, loadTwSnapshot, type TwQuote } from '../lib/twmarket';
@@ -30,6 +31,7 @@ export function CompanyPage({ symbol }: { symbol: string }) {
   const tw = isTw(symbol);
   const prof = profileOf(symbol);
   const name = quote?.name || lookupName(symbol) || symbol;
+  const etf = quote ? !!quote.etf : isEtf(symbol);
 
   useEffect(() => {
     setFin(null); setFinErr(''); setWiki(undefined);
@@ -48,13 +50,14 @@ export function CompanyPage({ symbol }: { symbol: string }) {
 
   // 沒有人工整理的簡介時，抓維基百科
   useEffect(() => {
-    if (prof || !name || name === symbol && tw) { setWiki(null); return; }
+    // ETF 名稱常帶公司名（例如某某生態系 ETF），維基百科會搜到那家公司而不是這檔基金
+    if (prof || etf || !name || name === symbol && tw) { setWiki(null); return; }
     const q = tw ? `${name} 公司` : `${name}`;
     const code = symbol.split('.')[0];
     // 台股：內文要提到公司簡稱或代號；美股：要提到英文名稱第一個字或代號
     const must = tw ? [name.replace(/-KY$|\*$/, ''), code] : [name.split(/[\s,.]/)[0], symbol];
     fetchWiki(q, must).then(setWiki);
-  }, [name]); // eslint-disable-line
+  }, [name, etf]); // eslint-disable-line
 
   const ratios = useMemo(() => (fin ? computeRatios(fin) : null), [fin]);
   const insights = useMemo(() => (fin && ratios ? analyze(fin, ratios) : []), [fin, ratios]);
@@ -80,8 +83,8 @@ export function CompanyPage({ symbol }: { symbol: string }) {
       </div>
 
       {/* ---------- 業務與關聯 ---------- */}
-      <div className="card">
-        <div className="card-title">公司業務 <Help id="theme" /></div>
+      {!(etf && !prof && !wiki && !themes.length) && <div className="card">
+        <div className="card-title">{etf ? '基金簡介' : '公司業務'} <Help id="theme" /></div>
         {prof ? (
           <>
             <p className="biz">{prof.biz}</p>
@@ -100,7 +103,7 @@ export function CompanyPage({ symbol }: { symbol: string }) {
             <div className="muted small">來源：維基百科《<a href={wiki.url} target="_blank" rel="noreferrer">{wiki.title}</a>》（自動搜尋，若不是這家公司請以官方資料為準）</div>
           </>
         ) : (
-          <p className="muted">目前沒有這家公司的業務簡介，可參考下方產業分類、同業與財報判斷。</p>
+          <p className="muted">{etf ? '這是 ETF（基金），不是單一公司；怎麼看 ETF 請見下方說明。' : '目前沒有這家公司的業務簡介，可參考下方產業分類、同業與財報判斷。'}</p>
         )}
         {(themes.length > 0 || industry || usSec) && (
           <div className="chips">
@@ -109,7 +112,7 @@ export function CompanyPage({ symbol }: { symbol: string }) {
             {themes.map((t) => <span key={t.id} className="chip" onClick={() => go('sectors')}>題材：{t.name}</span>)}
           </div>
         )}
-      </div>
+      </div>}
 
       {(prof?.related.length || peers.length > 0) && (
         <div className="card">
@@ -153,13 +156,14 @@ export function CompanyPage({ symbol }: { symbol: string }) {
         </div>
       )}
 
+      {etf && <EtfCard symbol={symbol} name={name} tw={tw} />}
       {tw && <DividendCard code={symbol.split('.')[0]} price={quote && !quote.demo ? quote.price : undefined} />}
       <NewsList symbol={symbol} name={name} limit={6} />
 
       {/* ---------- 財報 ---------- */}
-      {finErr && <div className="card err">財報：{finErr}</div>}
-      {!fin && !finErr && <div className="card center"><Spinner /><span className="muted small">讀取財報…</span></div>}
-      {fin && ratios && (
+      {!etf && finErr && <div className="card err">財報：{finErr}</div>}
+      {!etf && !fin && !finErr && <div className="card center"><Spinner /><span className="muted small">讀取財報…</span></div>}
+      {!etf && fin && ratios && (
         <>
           <div className="card">
             <div className="card-title">財報重點 <span className="muted small">最新一季 {fin.quarters[fin.quarters.length - 1]?.key}（{cur === 'USD' ? '美元' : '新台幣'}）</span></div>

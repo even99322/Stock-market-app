@@ -1,6 +1,6 @@
 import { getJSON, HttpError, NetworkError } from './http';
 import { demoChart } from './demo';
-import { digitsOf, isForeign, isIndex, kindOf, lookupName, marketOf } from './names';
+import { digitsOf, isEtf, isForeign, isIndex, kindOf, lookupName, marketOf } from './names';
 import { fetchTxChart, isTaifex } from './taifex';
 import { cleanSpikes, fxLooksBroken, fxPairOf, synthChart, USDTWD } from './fxcross';
 import type { Bar, ChartData } from './types';
@@ -19,6 +19,12 @@ export const RANGES: Record<string, { label: string; interval: string; ttl: numb
 const cache = new Map<string, ChartData>();
 /** 最近一次是否因為離線而使用示範資料 */
 export const dataStatus = { offline: false, lastError: '' };
+
+/** 「Harbor ETF Trust - Anthropic AI Lab Ecosystem ETF」→ 發行商與基金名稱 */
+export function splitFundName(long?: string): { name?: string; issuer?: string } {
+  const m = long?.match(/^(.*?\b(?:Trust|Funds?|Series|Portfolios?|Shares)\b[^-]*?)\s+-\s+(.+)$/i);
+  return m ? { issuer: m[1].trim(), name: m[2].trim() } : { name: long };
+}
 
 async function fetchYahoo(symbol: string, range: string): Promise<ChartData> {
   const interval = RANGES[range]?.interval || '1d';
@@ -54,9 +60,12 @@ async function fetchYahoo(symbol: string, range: string): Promise<ChartData> {
     kind,
     digits: digitsOf(kind, price ?? 0, kind === 'stock' && isForeign(symbol) ? -1 : meta.priceHint),
     ccy: meta.currency || undefined,
+    instType: meta.instrumentType || undefined,
     volUnit: kind === 'future' ? '口' : kind === 'fx' || kind === 'rate' ? 'none' : undefined,
     symbol: meta.symbol || symbol,
-    name: lookupName(symbol) || meta.longName || meta.shortName || symbol,
+    name: lookupName(symbol) || splitFundName(meta.longName).name || meta.shortName || symbol,
+    issuer: splitFundName(meta.longName).issuer,
+    listedAt: meta.firstTradeDate || undefined,
     market,
     currency: market === 'TW' ? 'TWD' : 'USD',
     bars,
@@ -148,6 +157,8 @@ export interface Quote {
   currency: ChartData['currency'];
   tradable: boolean;
   digits?: number;
+  /** ETF 或基金：沒有財報 */
+  etf?: boolean;
 }
 
 export async function fetchQuote(symbol: string, force = false): Promise<Quote> {
@@ -156,7 +167,7 @@ export async function fetchQuote(symbol: string, force = false): Promise<Quote> 
   return {
     symbol: c.symbol, name: c.name, price: c.price, prevClose: c.prevClose,
     change, changePct: c.prevClose ? (change / c.prevClose) * 100 : 0,
-    isOpen: c.isOpen, demo: c.demo, market: c.market, currency: c.currency, tradable: c.tradable, digits: c.digits,
+    isOpen: c.isOpen, demo: c.demo, market: c.market, currency: c.currency, tradable: c.tradable, digits: c.digits, etf: isEtf(c.symbol, c.instType),
   };
 }
 

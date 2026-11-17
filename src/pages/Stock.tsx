@@ -10,7 +10,7 @@ import { cls, fmtMoney, fmtNum, fmtPct, fmtPrice, fmtTime, fmtVol } from '../lib
 import { kindNote } from '../lib/global';
 import { fetchChart, RANGES } from '../lib/market';
 import { isTaifex } from '../lib/taifex';
-import { getFundamental, isIndex, loadTwData } from '../lib/names';
+import { getFundamental, isEtf, isIndex, loadTwData } from '../lib/names';
 import { industryOf, loadTwSnapshot } from '../lib/twmarket';
 import { priceStats } from '../lib/stats';
 import { store, useApp } from '../lib/store';
@@ -108,7 +108,7 @@ export function StockPage({ symbol }: { symbol: string }) {
             {quote.demo && <span className="badge warn">示範資料</span>}
           </div>
         </div>
-        {!isIndex(symbol) && <button className="btn sm ghost" onClick={() => go('company', sym)}>📊 公司・財報</button>}
+        {!isIndex(symbol) && <button className="btn sm ghost" onClick={() => go('company', sym)}>{isEtf(sym, chart?.instType) ? '📊 ETF 資訊' : '📊 公司・財報'}</button>}
         <button className={`icon-btn star ${inWatch ? 'on' : ''}`} onClick={toggleWatch} title="加入自選">{inWatch ? '★' : '☆'}</button>
       </div>
       <div className="price-line">

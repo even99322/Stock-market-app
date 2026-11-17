@@ -231,6 +231,13 @@ export function marketTag(symbol: string): string {
   return exchangeOf(symbol)?.tag || (symbol.startsWith('^') ? '指' : '美');
 }
 
+/** ETF 或基金（沒有財報）：Yahoo 類型、台股 00 開頭代號、內建清單 */
+export function isEtf(symbol: string, instType?: string): boolean {
+  if (instType) return instType === 'ETF' || instType === 'MUTUALFUND';
+  if (/^00\d{2,4}[A-Z]?\.(TW|TWO)$/.test(symbol)) return true;
+  return BUILTIN.some((b) => b.symbol === symbol && b.kind === 'etf');
+}
+
 /** 指數、匯率、期貨、海外股票等不能在模擬帳戶交易、也沒有財報分析的標的 */
 export function isIndex(symbol: string) {
   return symbol.startsWith('^') || symbol.includes('=') || /\.(NYB|TAIFEX)$/.test(symbol) || /-USD$/.test(symbol) || isForeign(symbol);

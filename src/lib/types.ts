@@ -23,6 +23,12 @@ export interface ChartData {
   volUnit?: '口' | 'none';
   /** 報價幣別（Yahoo 原始代碼，例如 JPY、HKD、GBp）；海外標的顯示用 */
   ccy?: string;
+  /** Yahoo 的標的類型（EQUITY、ETF、MUTUALFUND…） */
+  instType?: string;
+  /** 基金發行商（取自 Yahoo 完整名稱的「XXX Trust - 」前綴） */
+  issuer?: string;
+  /** 首個交易日（Unix 秒） */
+  listedAt?: number;
   symbol: string;
   name: string;
   market: Market;

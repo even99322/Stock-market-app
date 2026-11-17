@@ -97,3 +97,38 @@ describe('全球市場', () => {
     expect(night[0].high).toBe(41627);
   });
 });
+
+import { etfStats } from '../components/EtfCard';
+import { isEtf } from './names';
+describe('ETF', () => {
+  it('辨認 ETF', () => {
+    expect(isEtf('ANTW', 'ETF')).toBe(true);
+    expect(isEtf('ANTHZZX', 'MUTUALFUND')).toBe(true);
+    expect(isEtf('AAPL', 'EQUITY')).toBe(false);
+    expect(isEtf('0050.TW')).toBe(true);
+    expect(isEtf('00878.TW')).toBe(true);
+    expect(isEtf('2330.TW')).toBe(false);
+    expect(isEtf('VNM')).toBe(true);
+  });
+  it('報酬、波動與最大回落', () => {
+    const px = [100, 110, 99, 120, 108];
+    const bars = Array.from({ length: 60 }, (_, i) => ({ time: i, open: 1, high: 1, low: 1, close: px[i % 5] * (1 + i / 100), volume: 1000 }));
+    const s = etfStats(bars);
+    expect(s.days).toBe(60);
+    expect(s.r3m).toBeUndefined();
+    expect(s.r1m).toBeCloseTo(bars[59].close / bars[38].close - 1, 10);
+    expect(s.mdd!).toBeLessThan(-0.09);
+    expect(s.vol!).toBeGreaterThan(0.5);
+    expect(s.avgVol20).toBe(1000);
+  });
+});
+
+import { splitFundName } from './market';
+describe('基金名稱', () => {
+  it('拆出發行商', () => {
+    expect(splitFundName('Harbor ETF Trust - Anthropic AI Lab Ecosystem ETF')).toEqual({ issuer: 'Harbor ETF Trust', name: 'Anthropic AI Lab Ecosystem ETF' });
+    expect(splitFundName('Apple Inc.')).toEqual({ name: 'Apple Inc.' });
+    expect(splitFundName('Coca-Cola Company')).toEqual({ name: 'Coca-Cola Company' });
+    expect(splitFundName(undefined)).toEqual({ name: undefined });
+  });
+});
